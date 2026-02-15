@@ -30,6 +30,7 @@ const EMPTY_STATE_MESSAGES: Record<InboxFilterMode, { text: string; showIcon: bo
 	all: { text: 'All caught up — no sessions need attention.', showIcon: true },
 	unread: { text: 'No unread sessions.', showIcon: false },
 	read: { text: 'No read sessions with activity.', showIcon: false },
+	starred: { text: 'No starred sessions.', showIcon: false },
 };
 
 // ============================================================================
@@ -425,12 +426,14 @@ const SORT_OPTIONS: { value: InboxSortMode; label: string }[] = [
 	{ value: 'newest', label: 'Newest' },
 	{ value: 'oldest', label: 'Oldest' },
 	{ value: 'grouped', label: 'Grouped' },
+	{ value: 'byAgent', label: 'By Agent' },
 ];
 
 const FILTER_OPTIONS: { value: InboxFilterMode; label: string }[] = [
 	{ value: 'all', label: 'All' },
 	{ value: 'unread', label: 'Unread' },
 	{ value: 'read', label: 'Read' },
+	{ value: 'starred', label: '★ Starred' },
 ];
 
 export default function AgentInbox({
@@ -440,7 +443,7 @@ export default function AgentInbox({
 	onClose,
 	onNavigateToSession,
 }: AgentInboxProps) {
-	const [filterMode, setFilterMode] = useState<InboxFilterMode>('all');
+	const [filterMode, setFilterMode] = useState<InboxFilterMode>('unread');
 	const [sortMode, setSortMode] = useState<InboxSortMode>('newest');
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());

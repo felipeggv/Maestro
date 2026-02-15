@@ -284,8 +284,8 @@ describe('AgentInbox', () => {
 					onClose={onClose}
 				/>
 			);
-			// Default filter is 'all' → shows "All caught up" message
-			expect(screen.getByText('All caught up — no sessions need attention.')).toBeTruthy();
+			// Default filter is 'unread' → shows "No unread sessions." message
+			expect(screen.getByText('No unread sessions.')).toBeTruthy();
 		});
 
 		it('renders footer with keyboard hints', () => {
@@ -726,16 +726,16 @@ describe('AgentInbox', () => {
 			const dialog = screen.getByRole('dialog');
 			dialog.focus();
 
-			// Count all header buttons (3 sort + 3 filter + 1 close = 7)
+			// Count all header buttons (4 sort + 4 filter + 1 close = 9)
 			fireEvent.keyDown(dialog, { key: 'Tab' });
 			const firstButton = document.activeElement;
 			expect(firstButton?.tagName).toBe('BUTTON');
 
 			// Tab through all header buttons
-			for (let i = 0; i < 6; i++) {
+			for (let i = 0; i < 8; i++) {
 				fireEvent.keyDown(dialog, { key: 'Tab' });
 			}
-			// After 7 total Tabs (1 + 6), should be at the last header button
+			// After 9 total Tabs (1 + 8), should be at the last header button
 			expect(document.activeElement?.tagName).toBe('BUTTON');
 
 			// One more Tab should wrap back to list container
@@ -1013,11 +1013,12 @@ describe('AgentInbox', () => {
 			const filterControl = container.querySelector('[aria-label="Filter sessions"]');
 			expect(filterControl).toBeTruthy();
 			const buttons = filterControl!.querySelectorAll('button');
-			expect(buttons.length).toBe(3);
-			// "All" is active by default
-			expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
-			expect(buttons[1].getAttribute('aria-pressed')).toBe('false');
+			expect(buttons.length).toBe(4);
+			// "Unread" is active by default (index 1)
+			expect(buttons[0].getAttribute('aria-pressed')).toBe('false');
+			expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
 			expect(buttons[2].getAttribute('aria-pressed')).toBe('false');
+			expect(buttons[3].getAttribute('aria-pressed')).toBe('false');
 		});
 
 		it('sort segment buttons have aria-pressed attribute', () => {
@@ -1032,11 +1033,12 @@ describe('AgentInbox', () => {
 			const sortControl = container.querySelector('[aria-label="Sort sessions"]');
 			expect(sortControl).toBeTruthy();
 			const buttons = sortControl!.querySelectorAll('button');
-			expect(buttons.length).toBe(3);
+			expect(buttons.length).toBe(4);
 			// "Newest" is active by default
 			expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
 			expect(buttons[1].getAttribute('aria-pressed')).toBe('false');
 			expect(buttons[2].getAttribute('aria-pressed')).toBe('false');
+			expect(buttons[3].getAttribute('aria-pressed')).toBe('false');
 		});
 
 		it('aria-pressed updates when filter changes', () => {
@@ -1071,6 +1073,8 @@ describe('AgentInbox', () => {
 					onClose={onClose}
 				/>
 			);
+			// Default filter is 'unread'; switch to 'All' to test this empty state
+			fireEvent.click(screen.getByText('All'));
 			expect(screen.getByTestId('inbox-empty-state')).toBeTruthy();
 			expect(screen.getByText('All caught up — no sessions need attention.')).toBeTruthy();
 			expect(screen.getByTestId('inbox-empty-icon')).toBeTruthy();
@@ -1138,6 +1142,8 @@ describe('AgentInbox', () => {
 					onClose={onClose}
 				/>
 			);
+			// Default filter is 'unread' (no icon); switch to 'All' which shows the icon
+			fireEvent.click(screen.getByText('All'));
 			const icon = screen.getByTestId('inbox-empty-icon');
 			expect(icon.style.width).toBe('32px');
 			expect(icon.style.height).toBe('32px');
@@ -1153,7 +1159,8 @@ describe('AgentInbox', () => {
 					onClose={onClose}
 				/>
 			);
-			const text = screen.getByText('All caught up — no sessions need attention.');
+			// Default filter is 'unread' → shows "No unread sessions."
+			const text = screen.getByText('No unread sessions.');
 			expect(text.style.fontSize).toBe('14px');
 			expect(text.style.maxWidth).toBe('280px');
 			expect(text.style.textAlign).toBe('center');
