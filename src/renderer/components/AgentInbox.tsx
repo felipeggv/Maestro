@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { List, type ListImperativeAPI } from 'react-window';
-import { X, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, CheckCircle, ChevronDown, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import type { Theme, Session, Group, SessionState } from '../types';
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../types/agent-inbox';
@@ -439,6 +439,7 @@ export default function AgentInbox({
 	const [filterMode, setFilterMode] = useState<InboxFilterMode>('unread');
 	const [sortMode, setSortMode] = useState<InboxSortMode>('newest');
 	const [selectedIndex, setSelectedIndex] = useState(0);
+	const [isExpanded, setIsExpanded] = useState(false);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
 	const toggleGroup = useCallback((groupName: string) => {
@@ -636,8 +637,11 @@ export default function AgentInbox({
 	// Calculate list height
 	const listHeight = useMemo(() => {
 		if (typeof window === 'undefined') return 400;
+		if (isExpanded) {
+			return Math.min(window.innerHeight * 0.85 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80, 1000);
+		}
 		return Math.min(window.innerHeight * 0.8 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80, 700);
-	}, []);
+	}, [isExpanded]);
 
 	const actionCount = items.length;
 
@@ -652,11 +656,12 @@ export default function AgentInbox({
 				role="dialog"
 				aria-modal="true"
 				aria-label="Unified Inbox"
-				className="w-[780px] rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none"
+				className={`${isExpanded ? 'w-[1200px] max-w-[95vw]' : 'w-[780px]'} rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none`}
 				style={{
 					backgroundColor: theme.colors.bgActivity,
 					borderColor: theme.colors.border,
-					maxHeight: '80vh',
+					maxHeight: isExpanded ? '90vh' : '80vh',
+					transition: 'width 200ms ease, max-height 200ms ease',
 				}}
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={handleKeyDown}
@@ -691,24 +696,37 @@ export default function AgentInbox({
 								{actionCount} need action
 							</span>
 						</div>
-						<button
-							onClick={handleClose}
-							className="p-1.5 rounded"
-							style={{ color: theme.colors.textDim }}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-							}
-							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-							onFocus={(e) => {
-								e.currentTarget.style.outline = `2px solid ${theme.colors.accent}`;
-							}}
-							onBlur={(e) => {
-								e.currentTarget.style.outline = 'none';
-							}}
-							title="Close (Esc)"
-						>
-							<X className="w-4 h-4" />
-						</button>
+						<div className="flex items-center gap-1">
+							<button
+								onClick={() => setIsExpanded((prev) => !prev)}
+								className="p-1.5 rounded"
+								style={{ color: theme.colors.textDim }}
+								onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)}
+								onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+								title={isExpanded ? 'Collapse' : 'Expand'}
+								aria-label={isExpanded ? 'Collapse modal' : 'Expand modal'}
+							>
+								{isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+							</button>
+							<button
+								onClick={handleClose}
+								className="p-1.5 rounded"
+								style={{ color: theme.colors.textDim }}
+								onMouseEnter={(e) =>
+									(e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+								}
+								onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+								onFocus={(e) => {
+									e.currentTarget.style.outline = `2px solid ${theme.colors.accent}`;
+								}}
+								onBlur={(e) => {
+									e.currentTarget.style.outline = 'none';
+								}}
+								title="Close (Esc)"
+							>
+								<X className="w-4 h-4" />
+							</button>
+						</div>
 					</div>
 					{/* Header row 2: sort + filter controls */}
 					<div className="flex items-center justify-between">

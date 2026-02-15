@@ -27,6 +27,12 @@ vi.mock('lucide-react', () => ({
 	ChevronRight: ({ style }: { style?: React.CSSProperties }) => (
 		<span data-testid="chevron-right-icon" style={style}>▶</span>
 	),
+	Maximize2: ({ className }: { className?: string }) => (
+		<span data-testid="maximize2-icon" className={className}>⛶</span>
+	),
+	Minimize2: ({ className }: { className?: string }) => (
+		<span data-testid="minimize2-icon" className={className}>⊟</span>
+	),
 }));
 
 // Mock layer stack context
@@ -724,16 +730,16 @@ describe('AgentInbox', () => {
 			const dialog = screen.getByRole('dialog');
 			dialog.focus();
 
-			// Count all header buttons (4 sort + 4 filter + 1 close = 9)
+			// Count all header buttons (4 sort + 4 filter + 1 expand + 1 close = 10)
 			fireEvent.keyDown(dialog, { key: 'Tab' });
 			const firstButton = document.activeElement;
 			expect(firstButton?.tagName).toBe('BUTTON');
 
 			// Tab through all header buttons
-			for (let i = 0; i < 8; i++) {
+			for (let i = 0; i < 9; i++) {
 				fireEvent.keyDown(dialog, { key: 'Tab' });
 			}
-			// After 9 total Tabs (1 + 8), should be at the last header button
+			// After 10 total Tabs (1 + 9), should be at the last header button
 			expect(document.activeElement?.tagName).toBe('BUTTON');
 
 			// One more Tab should wrap back to list container
@@ -2091,6 +2097,153 @@ describe('AgentInbox', () => {
 			const dialog = screen.getByRole('dialog');
 			// border #44475a → rgb(68, 71, 90)
 			expect(dialog.style.borderColor).toBe('rgb(68, 71, 90)');
+		});
+	});
+
+	// ==========================================================================
+	// Expand / Collapse toggle
+	// ==========================================================================
+	describe('expand / collapse toggle', () => {
+		it('renders Maximize2 icon in normal mode with "Expand" title', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const expandBtn = screen.getByTitle('Expand');
+			expect(expandBtn).toBeTruthy();
+			expect(expandBtn.getAttribute('aria-label')).toBe('Expand modal');
+			expect(screen.getByTestId('maximize2-icon')).toBeTruthy();
+			expect(screen.queryByTestId('minimize2-icon')).toBeNull();
+		});
+
+		it('toggles to Minimize2 icon with "Collapse" title after click', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const expandBtn = screen.getByTitle('Expand');
+			fireEvent.click(expandBtn);
+			const collapseBtn = screen.getByTitle('Collapse');
+			expect(collapseBtn).toBeTruthy();
+			expect(collapseBtn.getAttribute('aria-label')).toBe('Collapse modal');
+			expect(screen.getByTestId('minimize2-icon')).toBeTruthy();
+			expect(screen.queryByTestId('maximize2-icon')).toBeNull();
+		});
+
+		it('uses w-[780px] class in normal mode', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			expect(dialog.className).toContain('w-[780px]');
+			expect(dialog.className).not.toContain('w-[1200px]');
+		});
+
+		it('uses w-[1200px] max-w-[95vw] class in expanded mode', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			fireEvent.click(screen.getByTitle('Expand'));
+			const dialog = screen.getByRole('dialog');
+			expect(dialog.className).toContain('w-[1200px]');
+			expect(dialog.className).toContain('max-w-[95vw]');
+			expect(dialog.className).not.toContain('w-[780px]');
+		});
+
+		it('sets maxHeight to 80vh in normal mode and 90vh in expanded mode', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			expect(dialog.style.maxHeight).toBe('80vh');
+			fireEvent.click(screen.getByTitle('Expand'));
+			expect(dialog.style.maxHeight).toBe('90vh');
+		});
+
+		it('applies 200ms transition for width and max-height', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			expect(dialog.style.transition).toContain('width 200ms ease');
+			expect(dialog.style.transition).toContain('max-height 200ms ease');
+		});
+
+		it('toggles back to normal mode on second click', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Expand
+			fireEvent.click(screen.getByTitle('Expand'));
+			expect(screen.getByRole('dialog').className).toContain('w-[1200px]');
+			// Collapse
+			fireEvent.click(screen.getByTitle('Collapse'));
+			expect(screen.getByRole('dialog').className).toContain('w-[780px]');
+			expect(screen.getByRole('dialog').className).not.toContain('w-[1200px]');
+		});
+
+		it('expand button uses same p-1.5 rounded pattern as close button', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const expandBtn = screen.getByTitle('Expand');
+			expect(expandBtn.className).toContain('p-1.5');
+			expect(expandBtn.className).toContain('rounded');
+		});
+
+		it('expand button hover sets accent background via JS handlers', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const expandBtn = screen.getByTitle('Expand');
+			fireEvent.mouseEnter(expandBtn);
+			// `${theme.colors.accent}20` = #bd93f920 → JSDOM converts to rgba(189, 147, 249, 0.125)
+			expect(expandBtn.style.backgroundColor).toBe('rgba(189, 147, 249, 0.125)');
+			fireEvent.mouseLeave(expandBtn);
+			expect(expandBtn.style.backgroundColor).toBe('transparent');
 		});
 	});
 

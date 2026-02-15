@@ -60,7 +60,8 @@ NUMBER HOTKEYS: Cmd/Ctrl+1-9,0 (Meta key required) — via useListNavigation hoo
 
 ## Task 4: Add Normal ↔ Expanded toggle button
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. Add an expand/collapse toggle. Reference the Maximize2/Minimize2 usage in `AutoRun.tsx` (line 1645, expand button) and `AutoRunExpandedModal.tsx` (line 430, collapse button) for icon precedent.
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. Add an expand/collapse toggle. Reference the Maximize2/Minimize2 usage in `AutoRun.tsx` (line 1645, expand button) and `AutoRunExpandedModal.tsx` (line 430, collapse button) for icon precedent.
+    > ✅ Done. Expand toggle added before close button using Maximize2/Minimize2 icons. Normal mode: `w-[780px]`, maxHeight `80vh`. Expanded mode: `w-[1200px] max-w-[95vw]`, maxHeight `90vh`. Smooth 200ms transition via inline style. Button uses same `p-1.5 rounded` + JS hover pattern as close button. `isExpanded` state lives at top level of AgentInbox component. listHeight uses 700 max normal, 1000 max expanded. Tab cycle test updated (9→10 buttons). 9 new tests added. 148/148 tests pass (108 component + 40 hook).
 
 **ARCHITECTURE NOTE:** The `isExpanded` state MUST live at the top level of the `AgentInbox` component (near `filterMode`, `sortMode`, `selectedIndex`), NOT inside any child component. Future Focus Mode will extract the list — `isExpanded` must stay in the parent shell.
 
