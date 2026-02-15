@@ -116,13 +116,13 @@ describe('Agent Inbox helpers: generateSmartSummary', () => {
 		expect(generateSmartSummary(undefined, 'idle')).toBe('No activity yet');
 	});
 
-	it('14. Summary truncated at 90 chars with "..."', () => {
-		const longText = 'A'.repeat(100) + '?';
+	it('14. Summary truncated at 250 chars with "..."', () => {
+		const longText = 'A'.repeat(260) + '?';
 		const logs = [
 			{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: longText },
 		];
 		const result = generateSmartSummary(logs, 'idle');
-		expect(result.length).toBe(93); // 90 chars + '...'
+		expect(result.length).toBe(253); // 250 chars + '...'
 		expect(result.endsWith('...')).toBe(true);
 	});
 });
