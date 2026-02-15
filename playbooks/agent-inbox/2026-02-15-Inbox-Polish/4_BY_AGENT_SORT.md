@@ -65,7 +65,7 @@ Use TABS for indentation (the above is shown with tabs). Success criteria: when 
 
 ## Task 2: Add byAgent group headers and metadata in the component
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. This is a combined task with 4 sub-changes. Read the ENTIRE task before starting.
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. This is a combined task with 4 sub-changes. Read the ENTIRE task before starting.
 
 **Sub-change A: Update RowExtraProps.** Find the `RowExtraProps` interface (around line 344). Add `sortMode: InboxSortMode` to it. Then find where `rowProps` is constructed (around line 628) and add `sortMode` to the object.
 

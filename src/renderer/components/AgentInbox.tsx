@@ -11,7 +11,6 @@ import { MODAL_PRIORITIES } from '../constants/modalPriorities';
 import { formatRelativeTime } from '../utils/formatters';
 import { formatShortcutKeys } from '../utils/shortcutFormatter';
 import { useModalStore, selectModalData, getModalActions } from '../stores/modalStore';
-import type { AgentInboxModalData } from '../stores/modalStore';
 
 interface AgentInboxProps {
 	theme: Theme;
@@ -44,17 +43,19 @@ type ListRow =
 	| { type: 'item'; item: InboxItem; index: number };
 
 function buildRows(items: InboxItem[], sortMode: InboxSortMode): ListRow[] {
-	if (sortMode !== 'grouped') {
+	if (sortMode !== 'grouped' && sortMode !== 'byAgent') {
 		return items.map((item, index) => ({ type: 'item' as const, item, index }));
 	}
 	const rows: ListRow[] = [];
-	let lastGroup: string | undefined | null = null;
+	let lastGroup: string | null = null;
 	let itemIndex = 0;
 	for (const item of items) {
-		const group = item.groupName ?? null;
-		if (group !== lastGroup) {
-			rows.push({ type: 'header', groupName: group ?? 'Ungrouped' });
-			lastGroup = group;
+		// For 'grouped': group by Left Bar group name
+		// For 'byAgent': group by session/agent name
+		const groupKey = sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
+		if (groupKey !== lastGroup) {
+			rows.push({ type: 'header', groupName: groupKey });
+			lastGroup = groupKey;
 		}
 		rows.push({ type: 'item', item, index: itemIndex });
 		itemIndex++;
@@ -347,6 +348,7 @@ interface RowExtraProps {
 	onNavigate: (item: InboxItem) => void;
 	collapsedGroups: Set<string>;
 	onToggleGroup: (groupName: string) => void;
+	sortMode: InboxSortMode;
 }
 
 function InboxRow({
@@ -358,6 +360,7 @@ function InboxRow({
 	onNavigate,
 	collapsedGroups,
 	onToggleGroup,
+	sortMode,
 }: {
 	ariaAttributes: { 'aria-posinset': number; 'aria-setsize': number; role: 'listitem' };
 	index: number;
@@ -368,6 +371,21 @@ function InboxRow({
 
 	if (row.type === 'header') {
 		const isCollapsed = collapsedGroups.has(row.groupName);
+
+		// For byAgent mode: derive agent type label and unread count from subsequent rows
+		let agentToolType: string | undefined;
+		let unreadCount = 0;
+		if (sortMode === 'byAgent') {
+			for (let i = index + 1; i < rows.length; i++) {
+				const r = rows[i];
+				if (r.type === 'header') break;
+				if (r.type === 'item') {
+					if (!agentToolType) agentToolType = r.item.toolType;
+					if (r.item.hasUnread) unreadCount++;
+				}
+			}
+		}
+
 		return (
 			<div
 				style={{
@@ -375,6 +393,7 @@ function InboxRow({
 					display: 'flex',
 					alignItems: 'center',
 					paddingLeft: 16,
+					paddingRight: 16,
 					fontSize: 13,
 					fontWeight: 600,
 					color: theme.colors.textDim,
@@ -390,6 +409,23 @@ function InboxRow({
 					: <ChevronDown style={{ width: 14, height: 14, marginRight: 4, flexShrink: 0 }} />
 				}
 				{row.groupName}
+				{sortMode === 'byAgent' && agentToolType && (
+					<span style={{ fontSize: 11, color: theme.colors.textDim, fontWeight: 400, marginLeft: 4 }}>
+						({agentToolType})
+					</span>
+				)}
+				{sortMode === 'byAgent' && unreadCount > 0 && (
+					<span style={{
+						fontSize: 11,
+						marginLeft: 'auto',
+						padding: '1px 6px',
+						borderRadius: 10,
+						backgroundColor: theme.colors.warning + '20',
+						color: theme.colors.warning,
+					}}>
+						{unreadCount} unread
+					</span>
+				)}
 			</div>
 		);
 	}
@@ -484,15 +520,37 @@ export default function AgentInbox({
 	}, []);
 
 	const items = useAgentInbox(sessions, groups, filterMode, sortMode);
+
+	// Auto-collapse zero-unread agents in byAgent mode
+	useEffect(() => {
+		if (sortMode === 'byAgent') {
+			// Compute which agents have zero unreads
+			const agentUnreads = new Map<string, number>();
+			for (const item of items) {
+				const count = agentUnreads.get(item.sessionName) ?? 0;
+				agentUnreads.set(item.sessionName, count + (item.hasUnread ? 1 : 0));
+			}
+			const toCollapse = new Set<string>();
+			for (const [agent, count] of agentUnreads) {
+				if (count === 0) toCollapse.add(agent);
+			}
+			setCollapsedGroups(toCollapse);
+		} else {
+			// Clear auto-collapsed state when leaving byAgent
+			setCollapsedGroups(new Set());
+		}
+	}, [sortMode, items]);
+
 	const allRows = useMemo(() => buildRows(items, sortMode), [items, sortMode]);
 	const rows = useMemo(() => {
 		if (collapsedGroups.size === 0) return allRows;
 		return allRows.filter(row => {
 			if (row.type === 'header') return true;
-			const itemGroup = row.item.groupName ?? 'Ungrouped';
-			return !collapsedGroups.has(itemGroup);
+			// For byAgent mode, collapse by sessionName; for grouped mode, by groupName
+			const collapseKey = sortMode === 'byAgent' ? row.item.sessionName : (row.item.groupName ?? 'Ungrouped');
+			return !collapsedGroups.has(collapseKey);
 		});
-	}, [allRows, collapsedGroups]);
+	}, [allRows, collapsedGroups, sortMode]);
 
 	// Store trigger element ref for focus restoration
 	const triggerRef = useRef<Element | null>(null);
@@ -648,8 +706,9 @@ export default function AgentInbox({
 			onNavigate: handleNavigate,
 			collapsedGroups,
 			onToggleGroup: toggleGroup,
+			sortMode,
 		}),
-		[rows, theme, selectedIndex, handleNavigate, collapsedGroups, toggleGroup]
+		[rows, theme, selectedIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode]
 	);
 
 	// Calculate list height
