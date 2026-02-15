@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { List, type ListImperativeAPI } from 'react-window';
-import { X, CheckCircle, Edit3, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Theme, Session, Group, SessionState } from '../types';
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../types/agent-inbox';
@@ -8,7 +8,6 @@ import { useAgentInbox } from '../hooks/useAgentInbox';
 import { useModalLayer } from '../hooks/ui/useModalLayer';
 import { MODAL_PRIORITIES } from '../constants/modalPriorities';
 import { formatRelativeTime } from '../utils/formatters';
-import { getAgentIcon } from '../constants/agentIcons';
 
 interface AgentInboxProps {
 	theme: Theme;
@@ -140,23 +139,22 @@ function InboxItemCardContent({
 					flex: 1,
 				}}
 			>
-				{/* Row 1: group / (agent_icon) session name / (pencil) tab name + timestamp */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+				{/* Row 1: GROUP | session | tab    timestamp */}
+				<div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
 					{item.groupName && (
 						<>
-							<span style={{ fontSize: 12, color: theme.colors.textDim, whiteSpace: 'nowrap' }}>
+							<span style={{
+								fontSize: 12,
+								color: theme.colors.textDim,
+								whiteSpace: 'nowrap',
+								textTransform: 'uppercase',
+								letterSpacing: '0.5px',
+							}}>
 								{item.groupName}
 							</span>
-							<span style={{ fontSize: 12, color: theme.colors.textDim }}>/</span>
+							<span style={{ fontSize: 12, color: theme.colors.textDim, padding: '0 6px' }}>|</span>
 						</>
 					)}
-					<span
-						title={item.toolType}
-						aria-label={`Agent: ${item.toolType}`}
-						style={{ fontSize: 14, flexShrink: 0 }}
-					>
-						{getAgentIcon(item.toolType)}
-					</span>
 					<span
 						style={{
 							fontSize: 14,
@@ -170,19 +168,12 @@ function InboxItemCardContent({
 					>
 						{item.sessionName}
 						{item.tabName && (
-							<span style={{ fontWeight: 400, color: theme.colors.textDim }}>
-								{' / '}
-								<Edit3
-									style={{
-										width: 10,
-										height: 10,
-										display: 'inline',
-										verticalAlign: 'middle',
-										marginRight: 2,
-									}}
-								/>
-								{item.tabName}
-							</span>
+							<>
+								<span style={{ fontSize: 12, color: theme.colors.textDim, padding: '0 6px', fontWeight: 400 }}>|</span>
+								<span style={{ fontWeight: 400, color: theme.colors.textDim }}>
+									{item.tabName}
+								</span>
+							</>
 						)}
 					</span>
 					<span

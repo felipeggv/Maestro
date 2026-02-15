@@ -21,9 +21,6 @@ vi.mock('lucide-react', () => ({
 			✓
 		</span>
 	),
-	Edit3: ({ style }: { style?: React.CSSProperties }) => (
-		<span data-testid="edit3-icon" style={style}>✎</span>
-	),
 	ChevronDown: ({ style }: { style?: React.CSSProperties }) => (
 		<span data-testid="chevron-down-icon" style={style}>▼</span>
 	),
@@ -317,7 +314,7 @@ describe('AgentInbox', () => {
 			expect(screen.getByText('Waiting: awaiting your response')).toBeTruthy();
 		});
 
-		it('renders group name with separator when session has group', () => {
+		it('renders group name with pipe separator when session has group', () => {
 			const groups = [createGroup({ id: 'g1', name: 'My Group' })];
 			const sessions = [
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
@@ -331,7 +328,8 @@ describe('AgentInbox', () => {
 				/>
 			);
 			expect(screen.getByText('My Group')).toBeTruthy();
-			expect(screen.getByText('/')).toBeTruthy();
+			// Group separator is now a pipe "|" instead of "/"
+			expect(screen.getAllByText('|').length).toBeGreaterThanOrEqual(1);
 		});
 
 		it('renders status badge with correct label', () => {
@@ -1473,7 +1471,7 @@ describe('AgentInbox', () => {
 			expect(badge.style.backgroundColor).toBeTruthy();
 		});
 
-		it('card has no standalone emoji outside agent icon in Row 1', () => {
+		it('card has no emoji characters in Row 1 (agent icon removed)', () => {
 			const groups = [createGroup({ id: 'g1', name: 'Test Group' })];
 			const sessions = [
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
@@ -1487,26 +1485,26 @@ describe('AgentInbox', () => {
 				/>
 			);
 			const option = container.querySelector('[role="option"]');
-			// Remove agent icon content (now in Row 1 with title attribute) before checking for emojis
-			const clone = option?.cloneNode(true) as HTMLElement;
-			const agentIcon = clone?.querySelector('[title="claude-code"]');
-			if (agentIcon) agentIcon.textContent = '';
-			const textContent = clone?.textContent ?? '';
-			// No emoji characters outside the agent icon
+			const textContent = option?.textContent ?? '';
+			// No emoji characters anywhere — agent icon has been removed
 			const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}]/u;
 			expect(emojiRegex.test(textContent)).toBe(false);
 		});
 
-		it('renders agent icon in Row 1 with tooltip', () => {
-			const sessions = [createInboxSession('s1', 't1')];
-			const { container } = render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
-			// Agent icon moved from Row 3 badge to Row 1, identified by title attribute
+		it('Row 1 uses pipe separators instead of agent icon and slash', () => {
+			const groups = [createGroup({ id: 'g1', name: 'Test Group' })];
+			const sessions = [
+				createInboxSession('s1', 't1', { groupId: 'g1' }),
+			];
+			const { container } = render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
+			// Agent icon (title="claude-code") should no longer exist
 			const agentIcon = container.querySelector('[title="claude-code"]');
-			expect(agentIcon).toBeTruthy();
-			expect(agentIcon!.getAttribute('aria-label')).toBe('Agent: claude-code');
+			expect(agentIcon).toBeNull();
+			// Pipe separators should be present
+			expect(screen.getAllByText('|').length).toBeGreaterThanOrEqual(1);
 		});
 
-		it('renders tab name after session name when tabName is present', () => {
+		it('renders tab name after session name with pipe separator when tabName is present', () => {
 			// Session with 2 tabs — tabName will be populated for each
 			const sessions = [
 				createSession({
@@ -1527,10 +1525,10 @@ describe('AgentInbox', () => {
 					onClose={onClose}
 				/>
 			);
-			// The card should show "My Session / Refactor" or "My Session / Debug"
+			// The card should show "My Session | Refactor" or "My Session | Debug" (pipe separator)
 			const sessionNames = screen.getAllByText(/My Session/);
-			// At least one should contain the tab name separator
-			const withTabName = sessionNames.find(el => el.textContent?.includes(' / '));
+			// At least one should contain a pipe separator for tab name
+			const withTabName = sessionNames.find(el => el.textContent?.includes('|'));
 			expect(withTabName).toBeTruthy();
 		});
 
@@ -1545,7 +1543,7 @@ describe('AgentInbox', () => {
 				/>
 			);
 			const sessionName = screen.getByText('Session s1');
-			// Single tab — no " / " separator in the session name element
+			// Single tab — no pipe separator in the session name element
 			expect(sessionName.textContent).toBe('Session s1');
 		});
 
@@ -1565,7 +1563,7 @@ describe('AgentInbox', () => {
 			expect(option.style.borderRadius).toBe('8px');
 		});
 
-		it('group name shown in muted 12px font', () => {
+		it('group name shown in muted 12px font with uppercase style', () => {
 			const groups = [createGroup({ id: 'g1', name: 'Dev Team' })];
 			const sessions = [
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
@@ -1582,6 +1580,9 @@ describe('AgentInbox', () => {
 			expect(groupName.style.fontSize).toBe('12px');
 			// JSDOM converts hex to rgb — just verify color is set
 			expect(groupName.style.color).toBeTruthy();
+			// Group name in Row 1 should be uppercase styled
+			expect(groupName.style.textTransform).toBe('uppercase');
+			expect(groupName.style.letterSpacing).toBe('0.5px');
 		});
 
 		it('timestamp shown right-aligned in muted 12px font', () => {
