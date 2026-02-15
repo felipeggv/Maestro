@@ -3,35 +3,126 @@
 ## Context
 
 - **Playbook:** Unified Inbox Polish
-- **Agent:** {{AGENT_NAME}}
-- **Project:** {{AGENT_PATH}}
-- **Loop:** {{LOOP_NUMBER}}
-- **Date:** {{DATE}}
-- **Working Folder:** {{AUTORUN_FOLDER}}
+- **Agent:** maestro.app
+- **Project:** /Users/felipegobbi/Documents/Vibework/Maestro
+- **Loop:** 00001
+- **Date:** 2026-02-15
+- **Working Folder:** /Users/felipegobbi/Documents/Vibework/Maestro/playbooks/agent-inbox/2026-02-15-Inbox-Polish/
 
 ## Purpose
 
-Implement the `byAgent` sort mode that groups inbox items by their parent agent (session), with agents that have unread items expanded at the top and agents with zero unreads collapsed at the bottom. Reuses the existing group expand/collapse infrastructure.
+Implement the `byAgent` sort mode that groups inbox items by their parent agent (session), with agents that have unread items expanded at the top and agents with zero unreads collapsed at the bottom.
 
 ## Key Paths
 
 - **Hook:** `src/renderer/hooks/useAgentInbox.ts`
 - **Component:** `src/renderer/components/AgentInbox.tsx`
+- **Types (reference):** `src/renderer/types/agent-inbox.ts`
 
 ---
 
 ## Task 1: Add byAgent sorting logic in the hook
 
-- [ ] Open `{{AGENT_PATH}}/src/renderer/hooks/useAgentInbox.ts`. Find the `sortItems` function (lines 125-147). Add a new case `'byAgent'` to the switch statement. The logic: (1) Group items by `sessionName` (the agent name). (2) For each group, compute `unreadCount = items in that group where hasUnread === true`. (3) Sort groups: groups with `unreadCount > 0` come first (sorted by highest unread count descending), then groups with `unreadCount === 0` (sorted alphabetically by sessionName). (4) Within each group, sort items by timestamp descending (newest first). Implementation approach: create a `Map<string, InboxItem[]>` keyed by `sessionName`, populate it, sort the keys using the criteria above, then flatten back to an array. Use TABS for indentation. Success criteria: when `sortMode === 'byAgent'`, items are grouped by `sessionName` with unread groups first. Run `npx tsc --noEmit --pretty 2>&1 | head -30` from `{{AGENT_PATH}}` — there should be ZERO type errors now (all sort/filter modes are handled).
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/hooks/useAgentInbox.ts`. Find the `sortItems` function (around lines 125-147). Add a new case `'byAgent'` to the switch statement. Here is the exact pseudocode to implement:
 
-## Task 2: Add byAgent group headers in the component
+```typescript
+case 'byAgent': {
+	// Step 1: Group items by sessionName
+	const agentGroups = new Map<string, InboxItem[]>()
+	for (const item of sorted) {
+		const key = item.sessionName
+		if (!agentGroups.has(key)) agentGroups.set(key, [])
+		agentGroups.get(key)!.push(item)
+	}
 
-- [ ] Open `{{AGENT_PATH}}/src/renderer/components/AgentInbox.tsx`. The `buildRows` function (lines 42-59) currently only inserts group headers when `sortMode === 'grouped'`. Update it to ALSO insert headers when `sortMode === 'byAgent'`. The difference: (1) For `'grouped'`, the header text is `item.groupName ?? 'Ungrouped'` (Left Bar group name). (2) For `'byAgent'`, the header text should be `item.sessionName` (the agent name). Modify the function: change `if (sortMode !== 'grouped')` to `if (sortMode !== 'grouped' && sortMode !== 'byAgent')`. Then inside the loop, determine the grouping key based on sort mode: for `'grouped'` use `item.groupName ?? 'Ungrouped'`, for `'byAgent'` use `item.sessionName`. Use TABS for indentation. Success criteria: when `sortMode === 'byAgent'`, group headers appear with agent names.
+	// Step 2: Pre-compute metadata per group
+	const groupMeta: { key: string; unreadCount: number; items: InboxItem[] }[] = []
+	for (const [key, groupItems] of agentGroups) {
+		const unreadCount = groupItems.filter(i => i.hasUnread).length
+		// Sort items within group: newest first
+		groupItems.sort((a, b) => b.timestamp - a.timestamp)
+		groupMeta.push({ key, unreadCount, items: groupItems })
+	}
 
-## Task 3: Add unread count badge and auto-collapse to byAgent headers
+	// Step 3: Sort groups — unreads first (by count desc), then zero-unreads (alphabetical)
+	groupMeta.sort((a, b) => {
+		if (a.unreadCount > 0 && b.unreadCount === 0) return -1
+		if (a.unreadCount === 0 && b.unreadCount > 0) return 1
+		if (a.unreadCount > 0 && b.unreadCount > 0) return b.unreadCount - a.unreadCount
+		return a.key.localeCompare(b.key)
+	})
 
-- [ ] Open `{{AGENT_PATH}}/src/renderer/components/AgentInbox.tsx`. Two changes: (1) **Unread count badge on group headers.** Find the group header rendering inside `InboxRow` (around lines 370-395). When `sortMode === 'byAgent'`, compute the unread count for this group by counting items in the `rows` array that belong to this group and have `item.hasUnread === true`. Display it as a badge after the group name: `<span style={{ fontSize: 11, marginLeft: 8, padding: '1px 6px', borderRadius: 10, backgroundColor: unreadCount > 0 ? theme.colors.warning + '20' : theme.colors.border + '40', color: unreadCount > 0 ? theme.colors.warning : theme.colors.textDim }}>{unreadCount} unread</span>`. To access `sortMode` inside `InboxRow`, add `sortMode: InboxSortMode` to the `RowExtraProps` interface and pass it through `rowProps`. (2) **Auto-collapse zero-unread agents.** In the main `AgentInbox` component, add a `useEffect` that runs when `sortMode` changes to `'byAgent'`. It should compute which agents have zero unreads and set them as collapsed in `collapsedGroups`. When switching away from `'byAgent'`, clear the auto-collapsed state. Use `items` (the filtered InboxItem array) to determine unread counts per agent. Use TABS for indentation. Success criteria: byAgent group headers show unread count badges, zero-unread agents are auto-collapsed when entering byAgent mode. The `RowExtraProps` interface includes `sortMode`.
+	// Step 4: Flatten back
+	sorted.length = 0
+	for (const group of groupMeta) {
+		sorted.push(...group.items)
+	}
+	break
+}
+```
 
-## Task 4: Add agent type label to byAgent group headers
+Use TABS for indentation (the above is shown with tabs). Success criteria: when `sortMode === 'byAgent'`, items are grouped by `sessionName` with unread groups first, sorted by unread count descending, zero-unread groups alphabetical. Run `npx tsc --noEmit --pretty 2>&1 | head -30` from `/Users/felipegobbi/Documents/Vibework/Maestro` — there should be ZERO type errors now (all sort/filter modes are handled).
 
-- [ ] Open `{{AGENT_PATH}}/src/renderer/components/AgentInbox.tsx`. When `sortMode === 'byAgent'`, the group header should also show the agent type (e.g., "Claude Code", "Codex") next to the agent name. Find the group header rendering in `InboxRow`. When a `'byAgent'` header is displayed, look up the `toolType` from the first item in that group: find the next row after the header that is of type `'item'` and read `item.toolType`. Display it in parentheses: `<span style={{ fontSize: 11, color: theme.colors.textDim, marginLeft: 4 }}>({toolType})</span>`. If the toolType cannot be determined, don't show the parenthetical. To find the first item of a group, pass the full `rows` array (already available via `RowExtraProps`) and scan from `index + 1` until finding a row of type `'item'`. Use TABS for indentation. Success criteria: byAgent group headers show format like `▼ vibework-chat (claude-code)    2 unread`.
+## Task 2: Add byAgent group headers and metadata in the component
+
+- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. This is a combined task with 4 sub-changes. Read the ENTIRE task before starting.
+
+**Sub-change A: Update RowExtraProps.** Find the `RowExtraProps` interface (around line 344). Add `sortMode: InboxSortMode` to it. Then find where `rowProps` is constructed (around line 628) and add `sortMode` to the object.
+
+**Sub-change B: Update buildRows.** Find the `buildRows` function (around lines 42-59). Change the early return condition from `if (sortMode !== 'grouped')` to `if (sortMode !== 'grouped' && sortMode !== 'byAgent')`. Then inside the loop, determine the grouping key based on sort mode:
+
+```typescript
+function buildRows(items: InboxItem[], sortMode: InboxSortMode): ListRow[] {
+	if (sortMode !== 'grouped' && sortMode !== 'byAgent') {
+		return items.map((item, index) => ({ type: 'item' as const, item, index }));
+	}
+	const rows: ListRow[] = [];
+	let lastGroup: string | null = null;
+	let itemIndex = 0;
+	for (const item of items) {
+		// For 'grouped': group by Left Bar group name
+		// For 'byAgent': group by session/agent name
+		const groupKey = sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
+		if (groupKey !== lastGroup) {
+			rows.push({ type: 'header', groupName: groupKey });
+			lastGroup = groupKey;
+		}
+		rows.push({ type: 'item', item, index: itemIndex });
+		itemIndex++;
+	}
+	return rows;
+}
+```
+
+**Sub-change C: Update group header rendering.** Find the group header rendering inside `InboxRow` (around lines 370-395). When `sortMode === 'byAgent'`, add two elements after the group name text:
+
+1. **Agent type label:** Look up the `toolType` from the first item after this header. Scan `rows` from `index + 1` until finding a row with `type === 'item'`, then read `row.item.toolType`. Display: `<span style={{ fontSize: 11, color: theme.colors.textDim, fontWeight: 400, marginLeft: 4 }}>({toolType})</span>`. If no item found, skip.
+
+2. **Unread count badge:** Count unread items in this group by scanning `rows` from `index + 1` until hitting the next header or end. Count items where `item.hasUnread === true`. Display ONLY if `unreadCount > 0`: `<span style={{ fontSize: 11, marginLeft: 'auto', padding: '1px 6px', borderRadius: 10, backgroundColor: theme.colors.warning + '20', color: theme.colors.warning }}>{unreadCount} unread</span>`. Do NOT show badge when `unreadCount === 0` (cleaner, less noise).
+
+**Sub-change D: Auto-collapse zero-unread agents.** In the main `AgentInbox` component, add a `useEffect` after the existing `collapsedGroups` state. This effect runs when `sortMode` changes:
+
+```typescript
+useEffect(() => {
+	if (sortMode === 'byAgent') {
+		// Compute which agents have zero unreads
+		const agentUnreads = new Map<string, number>();
+		for (const item of items) {
+			const count = agentUnreads.get(item.sessionName) ?? 0;
+			agentUnreads.set(item.sessionName, count + (item.hasUnread ? 1 : 0));
+		}
+		const toCollapse = new Set<string>();
+		for (const [agent, count] of agentUnreads) {
+			if (count === 0) toCollapse.add(agent);
+		}
+		setCollapsedGroups(toCollapse);
+	} else {
+		// Clear auto-collapsed state when leaving byAgent
+		setCollapsedGroups(new Set());
+	}
+}, [sortMode, items]);
+```
+
+**Important:** This `useEffect` replaces the collapsed state — any manually expanded groups will reset when `items` changes. This is acceptable because byAgent is a triage view.
+
+Use TABS for indentation. All colors from `theme.colors.*`. Success criteria: (1) byAgent headers show `sessionName (toolType)` with unread badge when > 0, (2) zero-unread agents are auto-collapsed, (3) `sortMode` is available in `RowExtraProps`, (4) `npx tsc --noEmit --pretty` from `/Users/felipegobbi/Documents/Vibework/Maestro` has ZERO errors.
