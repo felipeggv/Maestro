@@ -16,6 +16,7 @@
 
 import { create } from 'zustand';
 import type { Session, SettingsTab } from '../types';
+import type { InboxFilterMode, InboxSortMode } from '../types/agent-inbox';
 import type { SerializableWizardState } from '../components/Wizard';
 import type { ConductorBadge } from '../constants/conductorBadges';
 
@@ -49,6 +50,13 @@ export interface LightboxData {
 /** Settings modal data */
 export interface SettingsModalData {
 	tab: SettingsTab;
+}
+
+/** Agent Inbox modal data — persists filter/sort/expand across open/close */
+export interface AgentInboxModalData {
+	filterMode: InboxFilterMode;
+	sortMode: InboxSortMode;
+	isExpanded: boolean;
 }
 
 /** New instance modal data */
@@ -222,6 +230,7 @@ export type ModalId =
  */
 export interface ModalDataMap {
 	settings: SettingsModalData;
+	agentInbox: AgentInboxModalData;
 	newInstance: NewInstanceModalData;
 	editAgent: EditAgentModalData;
 	quickAction: QuickActionModalData;
@@ -526,9 +535,23 @@ export function getModalActions() {
 		setProcessMonitorOpen: (open: boolean) =>
 			open ? openModal('processMonitor') : closeModal('processMonitor'),
 
-		// Agent Inbox
-		setAgentInboxOpen: (open: boolean) =>
-			open ? openModal('agentInbox') : closeModal('agentInbox'),
+		// Agent Inbox — preserves data (filter/sort/expand) across open/close
+		setAgentInboxOpen: (open: boolean) => {
+			if (open) {
+				const existing = useModalStore.getState().getData('agentInbox');
+				openModal('agentInbox', existing ?? { filterMode: 'unread', sortMode: 'newest', isExpanded: false });
+			} else {
+				// Close without clearing data so preferences persist
+				const state = useModalStore.getState();
+				const current = state.modals.get('agentInbox');
+				if (!current?.open) return;
+				const newModals = new Map(state.modals);
+				newModals.set('agentInbox', { open: false, data: current.data });
+				useModalStore.setState({ modals: newModals });
+			}
+		},
+		updateAgentInboxData: (data: Partial<AgentInboxModalData>) =>
+			updateModalData('agentInbox', data),
 
 		// Usage Dashboard
 		setUsageDashboardOpen: (open: boolean) =>

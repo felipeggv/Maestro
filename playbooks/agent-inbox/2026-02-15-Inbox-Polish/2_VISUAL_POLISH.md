@@ -85,36 +85,8 @@ This matches the close button's exact hover pattern (`accent+20` background via 
 
 ## Task 5: Persist filter/sort/expand selection across modal open/close
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/stores/modalStore.ts`. The real persistence pattern in Maestro is `modalData` — see `SettingsModalData` (around line 49) which persists `tab: SettingsTab` across open/close via `updateModalData('settings', { tab })`. Follow this exact pattern.
-
-Add a new interface near `SettingsModalData`:
-
-```typescript
-export interface AgentInboxModalData {
-	filterMode: InboxFilterMode;
-	sortMode: InboxSortMode;
-	isExpanded: boolean;
-}
-```
-
-Add the import for `InboxFilterMode`, `InboxSortMode` from the agent-inbox types (check existing import paths in the file — e.g. if Settings imports from `../types`, follow the same pattern for agent-inbox types from `../types/agent-inbox`).
-
-Find the `setAgentInboxOpen` action. Change it to use `openModal` with default data:
-
-```typescript
-setAgentInboxOpen: (open: boolean) =>
-	open ? openModal('agentInbox', { filterMode: 'unread', sortMode: 'newest', isExpanded: false } as AgentInboxModalData)
-	     : closeModal('agentInbox'),
-```
-
-**Important:** Check how `openModal` handles existing data. Read lines 320-340 in modalStore. If `openModal` always overwrites data, then add a guard: only pass default data when `getData('agentInbox')` is undefined. The SettingsModal pattern uses a separate `setSettingsTab` that calls `updateModalData('settings', { tab })` for partial updates. Follow the same pattern — add a helper:
-
-```typescript
-updateAgentInboxData: (data: Partial<AgentInboxModalData>) =>
-	updateModalData('agentInbox', data),
-```
-
-Then open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. Read initial state from modalStore data. Look at how SettingsModal reads its tab — search for `selectModalData` or `getData` usage. Initialize `filterMode`, `sortMode`, `isExpanded` from the stored data, falling back to defaults. On state change, write back via `updateAgentInboxData`. Use TABS for indentation. Success criteria: (1) open inbox, switch to "All" filter, close, reopen — filter is still "All". (2) expand modal, close, reopen — modal is still expanded.
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/stores/modalStore.ts`. The real persistence pattern in Maestro is `modalData` — see `SettingsModalData` (around line 49) which persists `tab: SettingsTab` across open/close via `updateModalData('settings', { tab })`. Follow this exact pattern.
+    > ✅ Done. Added `AgentInboxModalData` interface + `ModalDataMap` entry in modalStore.ts. `setAgentInboxOpen(true)` reads existing data or falls back to defaults. `setAgentInboxOpen(false)` closes without clearing data (preserves preferences). Added `updateAgentInboxData` helper. AgentInbox.tsx reads initial state from `selectModalData('agentInbox')` with fallbacks, and writes back via `useEffect` on `[filterMode, sortMode, isExpanded]`. 148/148 tests pass. Lint clean.
 
 ## Task 6: Add numeric shortcuts (Cmd/Ctrl+1-9) using existing useListNavigation hook
 

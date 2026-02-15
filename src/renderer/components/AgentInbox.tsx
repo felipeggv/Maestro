@@ -8,6 +8,8 @@ import { useAgentInbox } from '../hooks/useAgentInbox';
 import { useModalLayer } from '../hooks/ui/useModalLayer';
 import { MODAL_PRIORITIES } from '../constants/modalPriorities';
 import { formatRelativeTime } from '../utils/formatters';
+import { useModalStore, selectModalData, getModalActions } from '../stores/modalStore';
+import type { AgentInboxModalData } from '../stores/modalStore';
 
 interface AgentInboxProps {
 	theme: Theme;
@@ -436,11 +438,19 @@ export default function AgentInbox({
 	onClose,
 	onNavigateToSession,
 }: AgentInboxProps) {
-	const [filterMode, setFilterMode] = useState<InboxFilterMode>('unread');
-	const [sortMode, setSortMode] = useState<InboxSortMode>('newest');
+	// Read persisted state from modalStore (survives open/close)
+	const inboxData = useModalStore(selectModalData('agentInbox'));
+	const [filterMode, setFilterMode] = useState<InboxFilterMode>(inboxData?.filterMode ?? 'unread');
+	const [sortMode, setSortMode] = useState<InboxSortMode>(inboxData?.sortMode ?? 'newest');
 	const [selectedIndex, setSelectedIndex] = useState(0);
-	const [isExpanded, setIsExpanded] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(inboxData?.isExpanded ?? false);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+	// Write state changes back to modalStore for persistence
+	useEffect(() => {
+		const { updateAgentInboxData } = getModalActions();
+		updateAgentInboxData({ filterMode, sortMode, isExpanded });
+	}, [filterMode, sortMode, isExpanded]);
 
 	const toggleGroup = useCallback((groupName: string) => {
 		setCollapsedGroups(prev => {
