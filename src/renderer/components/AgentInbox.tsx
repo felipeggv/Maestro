@@ -18,7 +18,7 @@ interface AgentInboxProps {
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
 }
 
-const ITEM_HEIGHT = 100;
+const ITEM_HEIGHT = 120;
 const GROUP_HEADER_HEIGHT = 36;
 const MODAL_HEADER_HEIGHT = 80;
 const MODAL_FOOTER_HEIGHT = 36;
@@ -643,7 +643,7 @@ export default function AgentInbox({
 	// Calculate list height
 	const listHeight = useMemo(() => {
 		if (typeof window === 'undefined') return 400;
-		return Math.min(window.innerHeight * 0.8 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80, 600);
+		return Math.min(window.innerHeight * 0.8 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80, 700);
 	}, []);
 
 	const actionCount = items.length;
@@ -659,7 +659,7 @@ export default function AgentInbox({
 				role="dialog"
 				aria-modal="true"
 				aria-label="Unified Inbox"
-				className="w-[600px] rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none"
+				className="w-[780px] rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none"
 				style={{
 					backgroundColor: theme.colors.bgActivity,
 					borderColor: theme.colors.border,

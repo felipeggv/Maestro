@@ -1560,8 +1560,8 @@ describe('AgentInbox', () => {
 				/>
 			);
 			const option = screen.getByRole('option');
-			// height = ITEM_HEIGHT (100) - 12 = 88px
-			expect(option.style.height).toBe('88px');
+			// height = ITEM_HEIGHT (120) - 12 = 108px
+			expect(option.style.height).toBe('108px');
 			expect(option.style.borderRadius).toBe('8px');
 		});
 
