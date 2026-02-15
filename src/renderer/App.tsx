@@ -11483,6 +11483,7 @@ You are taking over this conversation. Based on the context above, provide a bri
 		setUpdateCheckModalOpen,
 		setLogViewerOpen,
 		setProcessMonitorOpen,
+		setAgentInboxOpen,
 		setUsageDashboardOpen,
 		setSymphonyModalOpen,
 		setDirectorNotesOpen,
