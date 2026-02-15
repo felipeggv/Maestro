@@ -93,7 +93,9 @@ Use TABS for indentation. Create mock sessions with `hasUnread: true` so they ap
 
 ## Task 3: Add tests for starred filter mode
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/__tests__/renderer/hooks/useAgentInbox.test.ts`. Add a new `describe('starred filter mode', ...)` block. When creating test sessions, each `AITab` in the mock data MUST include the `starred: boolean` field (it exists on the AITab interface at `src/renderer/types/index.ts:417`). Test cases:
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/__tests__/renderer/hooks/useAgentInbox.test.ts`. Add a new `describe('starred filter mode', ...)` block. When creating test sessions, each `AITab` in the mock data MUST include the `starred: boolean` field (it exists on the AITab interface at `src/renderer/types/index.ts:417`). Test cases:
+
+> **Note:** Added 5 hook tests in `describe('starred filter mode')` and 5 component tests in `describe('starred filter')`. All 10 tests pass. Hook tests total: 45 passed. Component tests total: 133 passed.
 
 **Hook tests:**
 

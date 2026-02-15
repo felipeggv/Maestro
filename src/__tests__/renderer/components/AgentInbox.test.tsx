@@ -2683,6 +2683,115 @@ describe('AgentInbox', () => {
 	});
 
 	// ==========================================================================
+	// Starred filter (component tests)
+	// ==========================================================================
+	describe('starred filter', () => {
+		it('shows ★ Starred option in filter controls', () => {
+			const { container } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const filterControl = container.querySelector('[aria-label="Filter sessions"]');
+			expect(filterControl).toBeTruthy();
+			const buttons = filterControl!.querySelectorAll('button');
+			expect(buttons.length).toBe(4);
+			expect(buttons[3].textContent).toBe('★ Starred');
+		});
+
+		it('shows star indicator (★) on starred items', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Starred Agent',
+					state: 'idle',
+					aiTabs: [
+						createTab({ id: 't1', hasUnread: true, starred: true }),
+					] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const option = screen.getByRole('option');
+			expect(option.textContent).toContain('★');
+		});
+
+		it('star uses theme.colors.warning color', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Starred Agent',
+					state: 'idle',
+					aiTabs: [
+						createTab({ id: 't1', hasUnread: true, starred: true }),
+					] as any,
+				}),
+			];
+			const { container } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Find the ★ character span inside the option card
+			const option = container.querySelector('[role="option"]');
+			const allSpans = option!.querySelectorAll('span');
+			const starSpan = Array.from(allSpans).find(s => s.textContent === '★');
+			expect(starSpan).toBeTruthy();
+			// theme.colors.warning = #f1fa8c → rgb(241, 250, 140)
+			expect(starSpan!.style.color).toBe('rgb(241, 250, 140)');
+		});
+
+		it('non-starred items do NOT show star indicator', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Non-Starred',
+					state: 'idle',
+					aiTabs: [
+						createTab({ id: 't1', hasUnread: true, starred: false }),
+					] as any,
+				}),
+			];
+			const { container } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const option = container.querySelector('[role="option"]');
+			expect(option!.textContent).not.toContain('★');
+		});
+
+		it('empty state shows "No starred sessions." for starred filter', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Click the ★ Starred filter button
+			fireEvent.click(screen.getByText('★ Starred'));
+			expect(screen.getByText('No starred sessions.')).toBeTruthy();
+		});
+	});
+
+	// ==========================================================================
 	// Close button hover handlers
 	// ==========================================================================
 	describe('close button hover handlers', () => {

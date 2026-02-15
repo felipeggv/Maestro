@@ -840,6 +840,124 @@ describe('useAgentInbox', () => {
 		});
 	});
 
+	describe('starred filter mode', () => {
+		it('returns only starred items when filter is starred', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, starred: true })],
+				}),
+				makeSession({
+					id: 's2',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't2', hasUnread: true, starred: true })],
+				}),
+				makeSession({
+					id: 's3',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't3', hasUnread: true, starred: false })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'starred', 'newest')
+			);
+			expect(result.current).toHaveLength(2);
+			expect(result.current.map(i => i.sessionId).sort()).toEqual(['s1', 's2']);
+		});
+
+		it('returns empty array when no tabs are starred', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, starred: false })],
+				}),
+				makeSession({
+					id: 's2',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't2', hasUnread: false, starred: false })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'starred', 'newest')
+			);
+			expect(result.current).toHaveLength(0);
+		});
+
+		it('treats undefined starred as false (excludes from starred filter)', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, starred: undefined as any })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'starred', 'newest')
+			);
+			expect(result.current).toHaveLength(0);
+		});
+
+		it('starred filter works with all sort modes', () => {
+			const groups = [makeGroup({ id: 'g1', name: 'Backend' })];
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Agent A',
+					state: 'idle',
+					groupId: 'g1',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, starred: true, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'a' }] })],
+				}),
+				makeSession({
+					id: 's2',
+					name: 'Agent B',
+					state: 'idle',
+					groupId: 'g1',
+					aiTabs: [makeTab({ id: 't2', hasUnread: false, starred: true, logs: [{ id: 'l2', timestamp: 2000, source: 'ai' as const, text: 'b' }] })],
+				}),
+				makeSession({
+					id: 's3',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't3', hasUnread: true, starred: false })],
+				}),
+			];
+			// newest
+			const { result: r1 } = renderHook(() => useAgentInbox(sessions, groups, 'starred', 'newest'));
+			expect(r1.current).toHaveLength(2);
+			expect(r1.current[0].sessionId).toBe('s2'); // timestamp 2000 > 1000
+
+			// oldest
+			const { result: r2 } = renderHook(() => useAgentInbox(sessions, groups, 'starred', 'oldest'));
+			expect(r2.current).toHaveLength(2);
+			expect(r2.current[0].sessionId).toBe('s1'); // timestamp 1000 < 2000
+
+			// grouped
+			const { result: r3 } = renderHook(() => useAgentInbox(sessions, groups, 'starred', 'grouped'));
+			expect(r3.current).toHaveLength(2);
+
+			// byAgent
+			const { result: r4 } = renderHook(() => useAgentInbox(sessions, groups, 'starred', 'byAgent'));
+			expect(r4.current).toHaveLength(2);
+		});
+
+		it('starred items with hasUnread=false still appear in starred filter', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: false, starred: true })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'starred', 'newest')
+			);
+			expect(result.current).toHaveLength(1);
+			expect(result.current[0].sessionId).toBe('s1');
+			expect(result.current[0].starred).toBe(true);
+		});
+	});
+
 	describe('memoization', () => {
 		it('should return same reference when inputs do not change', () => {
 			const sessions = [
