@@ -14,13 +14,14 @@ export interface InboxItem {
 	timestamp: number            // Unix ms, must be validated > 0
 	state: SessionState
 	hasUnread: boolean
+	starred?: boolean
 }
 
-/** UI labels: "Newest", "Oldest", "Grouped" */
-export type InboxSortMode = 'newest' | 'oldest' | 'grouped'
+/** UI labels: "Newest", "Oldest", "Grouped", "By Agent" */
+export type InboxSortMode = 'newest' | 'oldest' | 'grouped' | 'byAgent'
 
-/** UI labels: "All", "Unread", "Read" */
-export type InboxFilterMode = 'all' | 'unread' | 'read'
+/** UI labels: "All", "Unread", "Read", "Starred" */
+export type InboxFilterMode = 'all' | 'unread' | 'read' | 'starred'
 
 /** Human-readable status badges */
 export const STATUS_LABELS: Record<SessionState, string> = {
