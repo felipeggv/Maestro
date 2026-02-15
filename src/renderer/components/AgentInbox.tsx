@@ -180,6 +180,7 @@ function InboxItemCardContent({
 							</>
 						)}
 					</span>
+					{item.starred && <span style={{ color: theme.colors.warning, fontSize: 12, flexShrink: 0 }}>★</span>}
 					<span
 						style={{
 							fontSize: 12,

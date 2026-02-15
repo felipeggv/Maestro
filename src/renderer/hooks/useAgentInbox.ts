@@ -12,7 +12,8 @@ const DEFAULT_MESSAGE = 'No activity yet'
 function matchesFilter(
 	sessionState: Session['state'],
 	hasUnread: boolean,
-	filterMode: InboxFilterMode
+	filterMode: InboxFilterMode,
+	isStarred: boolean
 ): boolean {
 	switch (filterMode) {
 		case 'all':
@@ -21,6 +22,8 @@ function matchesFilter(
 			return hasUnread === true
 		case 'read':
 			return hasUnread === false && (sessionState === 'idle' || sessionState === 'waiting_input')
+		case 'starred':
+			return isStarred === true
 		default:
 			return false
 	}
@@ -179,7 +182,7 @@ export function useAgentInbox(
 				const tab = tabs[tabIdx]
 				const hasUnread = tab.hasUnread === true
 
-				if (!matchesFilter(session.state, hasUnread, filterMode)) continue
+				if (!matchesFilter(session.state, hasUnread, filterMode, tab.starred === true)) continue
 
 				const parentGroup = session.groupId ? groupMap.get(session.groupId) : undefined
 
@@ -197,6 +200,7 @@ export function useAgentInbox(
 					timestamp: deriveTimestamp(tab.logs, tab.createdAt),
 					state: session.state,
 					hasUnread,
+					starred: tab.starred === true,
 				})
 			}
 		}
