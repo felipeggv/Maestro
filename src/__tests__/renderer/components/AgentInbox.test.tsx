@@ -99,6 +99,14 @@ vi.mock('../../../renderer/utils/formatters', () => ({
 	},
 }));
 
+// Mock shortcutFormatter
+vi.mock('../../../renderer/utils/shortcutFormatter', () => ({
+	formatShortcutKeys: (keys: string[]) => {
+		const map: Record<string, string> = { Meta: '\u2318' };
+		return keys.map((k) => map[k] || k).join('');
+	},
+}));
+
 // ============================================================================
 // Test factories
 // ============================================================================
@@ -291,7 +299,7 @@ describe('AgentInbox', () => {
 			expect(screen.getByText('No unread sessions.')).toBeTruthy();
 		});
 
-		it('renders footer with keyboard hints', () => {
+		it('renders footer with item count and keyboard hints', () => {
 			render(
 				<AgentInbox
 					theme={theme}
@@ -300,9 +308,11 @@ describe('AgentInbox', () => {
 					onClose={onClose}
 				/>
 			);
-			expect(screen.getByText('↑↓ Navigate')).toBeTruthy();
-			expect(screen.getByText('Enter Open')).toBeTruthy();
-			expect(screen.getByText('Esc Close')).toBeTruthy();
+			expect(screen.getByText('0 items')).toBeTruthy();
+			expect(screen.getByText(/↑↓ navigate/)).toBeTruthy();
+			expect(screen.getByText(/Enter open/)).toBeTruthy();
+			expect(screen.getByText(/quick select/)).toBeTruthy();
+			expect(screen.getByText(/Esc close/)).toBeTruthy();
 		});
 
 		it('renders session name and last message for inbox items', () => {
@@ -1862,8 +1872,10 @@ describe('AgentInbox', () => {
 				/>
 			);
 			// The row wrapper wraps each card with padding for spacing
+			// DOM: rowWrapper > badgeFlexContainer > cardContentWrapper > option
 			const option = screen.getByRole('option');
-			const rowWrapper = option.parentElement!;
+			// Go up through badge flex container to the outer row wrapper with padding
+			const rowWrapper = option.parentElement!.parentElement!.parentElement!;
 			expect(rowWrapper.style.paddingTop).toBe('6px');
 			expect(rowWrapper.style.paddingBottom).toBe('6px');
 			// 6 + 6 = 12px gap between cards
@@ -1909,11 +1921,11 @@ describe('AgentInbox', () => {
 				/>
 			);
 			const options = screen.getAllByRole('option');
-			// First item's row wrapper should have a borderBottom divider
-			const firstRowWrapper = options[0].parentElement!;
+			// DOM: rowWrapper > badgeFlexContainer > cardContentWrapper > option
+			const firstRowWrapper = options[0].parentElement!.parentElement!.parentElement!;
 			expect(firstRowWrapper.style.borderBottom).toContain('1px solid');
 			// Last item's row wrapper should NOT have a borderBottom divider
-			const lastRowWrapper = options[1].parentElement!;
+			const lastRowWrapper = options[1].parentElement!.parentElement!.parentElement!;
 			expect(lastRowWrapper.style.borderBottom).toBe('');
 		});
 
@@ -2244,6 +2256,211 @@ describe('AgentInbox', () => {
 			expect(expandBtn.style.backgroundColor).toBe('rgba(189, 147, 249, 0.125)');
 			fireEvent.mouseLeave(expandBtn);
 			expect(expandBtn.style.backgroundColor).toBe('transparent');
+		});
+	});
+
+	// ==========================================================================
+	// Number badges
+	// ==========================================================================
+	describe('number badges', () => {
+		it('renders number badges 1-9 and 0 for first 10 items', () => {
+			const sessions = Array.from({ length: 10 }, (_, i) =>
+				createInboxSession(`s${i}`, `t${i}`)
+			);
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const badges = screen.getAllByTestId('number-badge');
+			expect(badges.length).toBe(10);
+			// First 9 items show 1-9, 10th item shows 0
+			expect(badges[0].textContent).toBe('1');
+			expect(badges[8].textContent).toBe('9');
+			expect(badges[9].textContent).toBe('0');
+		});
+
+		it('number badge uses w-5 h-5 rounded text-xs font-bold classes', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const badge = screen.getByTestId('number-badge');
+			expect(badge.className).toContain('w-5');
+			expect(badge.className).toContain('h-5');
+			expect(badge.className).toContain('rounded');
+			expect(badge.className).toContain('text-xs');
+			expect(badge.className).toContain('font-bold');
+		});
+
+		it('number badge uses bgMain and textDim theme colors', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const badge = screen.getByTestId('number-badge');
+			// bgMain #282a36 → rgb(40, 42, 54)
+			expect(badge.style.backgroundColor).toBe('rgb(40, 42, 54)');
+			// textDim #6272a4 → rgb(98, 114, 164)
+			expect(badge.style.color).toBe('rgb(98, 114, 164)');
+		});
+	});
+
+	// ==========================================================================
+	// Cmd/Ctrl+number hotkeys
+	// ==========================================================================
+	describe('Cmd/Ctrl+number hotkeys', () => {
+		it('Meta+1 selects and navigates to first item', () => {
+			const sessions = [
+				createInboxSession('s1', 't1'),
+				createInboxSession('s2', 't2'),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '1', metaKey: true });
+			expect(onNavigateToSession).toHaveBeenCalledWith('s1', 't1');
+			expect(onClose).toHaveBeenCalled();
+		});
+
+		it('Meta+2 selects and navigates to second item', () => {
+			const sessions = [
+				createInboxSession('s1', 't1'),
+				createInboxSession('s2', 't2'),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '2', metaKey: true });
+			expect(onNavigateToSession).toHaveBeenCalledWith('s2', 't2');
+			expect(onClose).toHaveBeenCalled();
+		});
+
+		it('bare digit key without Meta does NOT trigger navigation', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '1' });
+			expect(onNavigateToSession).not.toHaveBeenCalled();
+		});
+
+		it('Ctrl+1 also triggers navigation (Windows/Linux)', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '1', ctrlKey: true });
+			expect(onNavigateToSession).toHaveBeenCalledWith('s1', 't1');
+		});
+
+		it('Meta+0 selects 10th item', () => {
+			const sessions = Array.from({ length: 10 }, (_, i) =>
+				createInboxSession(`s${i}`, `t${i}`)
+			);
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '0', metaKey: true });
+			expect(onNavigateToSession).toHaveBeenCalledWith('s9', 't9');
+		});
+
+		it('Meta+number out of range does nothing', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '5', metaKey: true });
+			expect(onNavigateToSession).not.toHaveBeenCalled();
+		});
+	});
+
+	// ==========================================================================
+	// Footer pattern
+	// ==========================================================================
+	describe('footer pattern', () => {
+		it('footer uses justify-between layout with count left and hints right', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			expect(screen.getByText('1 items')).toBeTruthy();
+			// Hints are in a single span with bullet separators
+			const hintsSpan = screen.getByText(/quick select/);
+			expect(hintsSpan.textContent).toContain('•');
+		});
+
+		it('footer shows platform-aware shortcut key via formatShortcutKeys', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Mock returns ⌘ for Meta
+			expect(screen.getByText(/⌘1-9/)).toBeTruthy();
 		});
 	});
 

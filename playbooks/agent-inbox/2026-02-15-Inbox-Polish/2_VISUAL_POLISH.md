@@ -90,7 +90,7 @@ This matches the close button's exact hover pattern (`accent+20` background via 
 
 ## Task 6: Add numeric shortcuts (Cmd/Ctrl+1-9) using existing useListNavigation hook
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. The codebase has a `useListNavigation` hook at `src/renderer/hooks/keyboard/useListNavigation.ts` (NOTE: it's in the `keyboard/` subdirectory, NOT directly in `hooks/`). It handles Cmd/Ctrl+number hotkeys, arrow key navigation, and selection. It's used by QuickActionsModal (`QuickActionsModal.tsx:1356`) and TabSwitcherModal.
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/renderer/components/AgentInbox.tsx`. The codebase has a `useListNavigation` hook at `src/renderer/hooks/keyboard/useListNavigation.ts` (NOTE: it's in the `keyboard/` subdirectory, NOT directly in `hooks/`). It handles Cmd/Ctrl+number hotkeys, arrow key navigation, and selection. It's used by QuickActionsModal (`QuickActionsModal.tsx:1356`) and TabSwitcherModal.
 
 **Sub-change A: Import and use useListNavigation.** Import `useListNavigation` from `../hooks/keyboard/useListNavigation`. Replace the manual `handleKeyDown` arrow key and Enter logic with a call to this hook:
 
@@ -149,3 +149,4 @@ This is the EXACT pattern from QuickActionsModal — `w-5 h-5 rounded`, `text-xs
 Use `•` (middle dot with spaces) as separator — this is the real TabSwitcherModal pattern. Left side shows count, right side shows hints. `formatShortcutKeys(['Meta'])` outputs `⌘` on macOS and `Ctrl` on Windows/Linux — platform-aware.
 
 Use TABS for indentation. Success criteria: (1) `useListNavigation` hook from `keyboard/` subdir handles arrow keys + Cmd/Ctrl+number hotkeys. (2) number badges match QuickActionsModal pattern exactly (`w-5 h-5 rounded text-xs font-bold`). (3) footer matches TabSwitcherModal pattern (`justify-between`, count left, hints right, `•` separator, platform-aware shortcut). (4) `Cmd/Ctrl+1-9` selects and opens cards (Meta key required — bare digit keys do NOT trigger).
+    > ✅ Done. (A) Replaced manual ArrowUp/Down/Enter handlers with `useListNavigation` hook (wrap: true, enableNumberHotkeys: true). Tab cycling preserved in merged `handleKeyDown`. (B) Number badges 1-9,0 added to `InboxRow` using exact QuickActionsModal pattern (`w-5 h-5 rounded text-xs font-bold`, bgMain/textDim). (C) Footer updated to `justify-between` with `{count} items` left, combined hint string right using `•` separators and `formatShortcutKeys(['Meta'])` for platform-aware shortcut. 11 new tests added (3 badge, 6 hotkey, 2 footer). 2 DOM traversal tests updated for badge wrapper div. 159/159 tests pass (119 component + 40 hook).

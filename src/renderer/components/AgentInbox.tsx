@@ -5,9 +5,11 @@ import type { Theme, Session, Group, SessionState } from '../types';
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../types/agent-inbox';
 import { useAgentInbox } from '../hooks/useAgentInbox';
+import { useListNavigation } from '../hooks/keyboard/useListNavigation';
 import { useModalLayer } from '../hooks/ui/useModalLayer';
 import { MODAL_PRIORITIES } from '../constants/modalPriorities';
 import { formatRelativeTime } from '../utils/formatters';
+import { formatShortcutKeys } from '../utils/shortcutFormatter';
 import { useModalStore, selectModalData, getModalActions } from '../stores/modalStore';
 import type { AgentInboxModalData } from '../stores/modalStore';
 
@@ -392,6 +394,8 @@ function InboxRow({
 	}
 
 	const isLastRow = index === rows.length - 1;
+	const showNumber = row.index >= 0 && row.index < 10;
+	const numberBadge = row.index === 9 ? 0 : row.index + 1;
 
 	return (
 		<div
@@ -404,12 +408,27 @@ function InboxRow({
 				borderBottom: isLastRow ? undefined : `1px solid ${theme.colors.border}40`,
 			}}
 		>
-			<InboxItemCardContent
-				item={row.item}
-				theme={theme}
-				isSelected={row.index === selectedIndex}
-				onClick={() => onNavigate(row.item)}
-			/>
+			<div style={{ display: 'flex', alignItems: 'center', gap: 8, height: '100%' }}>
+				{showNumber ? (
+					<div
+						className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
+						style={{ backgroundColor: theme.colors.bgMain, color: theme.colors.textDim }}
+						data-testid="number-badge"
+					>
+						{numberBadge}
+					</div>
+				) : (
+					<div className="flex-shrink-0 w-5 h-5" />
+				)}
+				<div style={{ flex: 1, minWidth: 0 }}>
+					<InboxItemCardContent
+						item={row.item}
+						theme={theme}
+						isSelected={row.index === selectedIndex}
+						onClick={() => onNavigate(row.item)}
+					/>
+				</div>
+			</div>
 		</div>
 	);
 }
@@ -442,7 +461,6 @@ export default function AgentInbox({
 	const inboxData = useModalStore(selectModalData('agentInbox'));
 	const [filterMode, setFilterMode] = useState<InboxFilterMode>(inboxData?.filterMode ?? 'unread');
 	const [sortMode, setSortMode] = useState<InboxSortMode>(inboxData?.sortMode ?? 'newest');
-	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [isExpanded, setIsExpanded] = useState(inboxData?.isExpanded ?? false);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
@@ -506,15 +524,32 @@ export default function AgentInbox({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const headerRef = useRef<HTMLDivElement>(null);
 
-	// Reset selection when items change
-	useEffect(() => {
-		setSelectedIndex(0);
-	}, [items]);
-
 	// Focus the container on mount for keyboard nav
 	useEffect(() => {
 		containerRef.current?.focus();
 	}, []);
+
+	const handleNavigate = useCallback(
+		(item: InboxItem) => {
+			if (onNavigateToSession) {
+				onNavigateToSession(item.sessionId, item.tabId);
+			}
+			handleClose();
+		},
+		[onNavigateToSession, handleClose]
+	);
+
+	// useListNavigation handles ArrowUp/Down, Enter, and Cmd/Ctrl+1-9 hotkeys
+	const { selectedIndex, handleKeyDown: listHandleKeyDown } = useListNavigation({
+		listLength: items.length,
+		onSelect: (index: number) => {
+			if (items[index]) handleNavigate(items[index]);
+		},
+		enableNumberHotkeys: true,
+		firstVisibleIndex: 0,
+		enabled: true,
+		wrap: true,
+	});
 
 	// Scroll to selected item
 	useEffect(() => {
@@ -546,79 +581,51 @@ export default function AgentInbox({
 		return `inbox-item-${item.sessionId}-${item.tabId}`;
 	}, [items, selectedIndex]);
 
-	const handleNavigate = useCallback(
-		(item: InboxItem) => {
-			if (onNavigateToSession) {
-				onNavigateToSession(item.sessionId, item.tabId);
-			}
-			handleClose();
-		},
-		[onNavigateToSession, handleClose]
-	);
-
 	// Collect focusable header elements for Tab cycling
 	const getHeaderFocusables = useCallback((): HTMLElement[] => {
 		if (!headerRef.current) return [];
 		return Array.from(headerRef.current.querySelectorAll<HTMLElement>('button, [tabindex="0"]'));
 	}, []);
 
-	// Keyboard navigation
+	// Combined keyboard handler: useListNavigation for arrows/Enter/numbers + Tab cycling
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			switch (e.key) {
-				case 'ArrowUp':
-					e.preventDefault();
-					if (items.length === 0) return;
-					setSelectedIndex((prev) => (prev <= 0 ? items.length - 1 : prev - 1));
-					break;
-				case 'ArrowDown':
-					e.preventDefault();
-					if (items.length === 0) return;
-					setSelectedIndex((prev) => (prev >= items.length - 1 ? 0 : prev + 1));
-					break;
-				case 'Enter':
-					e.preventDefault();
-					if (items.length === 0) return;
-					if (items[selectedIndex]) {
-						handleNavigate(items[selectedIndex]);
-					}
-					break;
-				case 'Tab': {
-					const focusables = getHeaderFocusables();
-					if (focusables.length === 0) break;
-					const active = document.activeElement;
-					const focusIdx = focusables.indexOf(active as HTMLElement);
+			// Tab cycling is not handled by useListNavigation — handle it here
+			if (e.key === 'Tab') {
+				const focusables = getHeaderFocusables();
+				if (focusables.length === 0) return;
+				const active = document.activeElement;
+				const focusIdx = focusables.indexOf(active as HTMLElement);
 
-					if (e.shiftKey) {
-						// Shift+Tab: go backwards
-						if (focusIdx <= 0) {
-							// From first header control (or list), wrap to list container
-							e.preventDefault();
-							containerRef.current?.focus();
-						} else {
-							e.preventDefault();
-							focusables[focusIdx - 1].focus();
-						}
+				if (e.shiftKey) {
+					// Shift+Tab: go backwards
+					if (focusIdx <= 0) {
+						e.preventDefault();
+						containerRef.current?.focus();
 					} else {
-						// Tab: go forwards
-						if (focusIdx === -1) {
-							// Currently in list area — move to first header control
-							e.preventDefault();
-							focusables[0].focus();
-						} else if (focusIdx >= focusables.length - 1) {
-							// At last header control — wrap back to list
-							e.preventDefault();
-							containerRef.current?.focus();
-						} else {
-							e.preventDefault();
-							focusables[focusIdx + 1].focus();
-						}
+						e.preventDefault();
+						focusables[focusIdx - 1].focus();
 					}
-					break;
+				} else {
+					// Tab: go forwards
+					if (focusIdx === -1) {
+						e.preventDefault();
+						focusables[0].focus();
+					} else if (focusIdx >= focusables.length - 1) {
+						e.preventDefault();
+						containerRef.current?.focus();
+					} else {
+						e.preventDefault();
+						focusables[focusIdx + 1].focus();
+					}
 				}
+				return;
 			}
+
+			// Delegate to useListNavigation for arrows, Enter, Cmd/Ctrl+1-9
+			listHandleKeyDown(e);
 		},
-		[items, selectedIndex, handleNavigate, getHeaderFocusables]
+		[getHeaderFocusables, listHandleKeyDown]
 	);
 
 	// Row height getter for variable-size rows
@@ -806,16 +813,15 @@ export default function AgentInbox({
 
 				{/* Footer — 36px */}
 				<div
-					className="flex items-center justify-center gap-6 px-4 border-t text-xs"
+					className="flex items-center justify-between px-4 py-2 border-t text-xs"
 					style={{
 						height: MODAL_FOOTER_HEIGHT,
 						borderColor: theme.colors.border,
 						color: theme.colors.textDim,
 					}}
 				>
-					<span>↑↓ Navigate</span>
-					<span>Enter Open</span>
-					<span>Esc Close</span>
+					<span>{actionCount} items</span>
+					<span>{`↑↓ navigate • Enter open • ${formatShortcutKeys(['Meta'])}1-9 quick select • Esc close`}</span>
 				</div>
 			</div>
 		</div>
