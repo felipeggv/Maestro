@@ -197,14 +197,16 @@ function InboxItemCardContent({
 					</span>
 				</div>
 
-				{/* Row 2: last message */}
+				{/* Row 2: last message (3-line clamp) */}
 				<div
 					style={{
 						fontSize: 13,
 						color: theme.colors.textDim,
 						overflow: 'hidden',
-						textOverflow: 'ellipsis',
-						whiteSpace: 'nowrap',
+						display: '-webkit-box',
+						WebkitLineClamp: 3,
+						WebkitBoxOrient: 'vertical' as const,
+						lineHeight: '1.4',
 					}}
 				>
 					{item.lastMessage}

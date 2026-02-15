@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { Session, Group } from '../types'
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../types/agent-inbox'
 
-const MAX_MESSAGE_LENGTH = 90
+const MAX_MESSAGE_LENGTH = 250
 const DEFAULT_MESSAGE = 'No activity yet'
 
 /**

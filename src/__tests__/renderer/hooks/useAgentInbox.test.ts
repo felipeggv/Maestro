@@ -511,8 +511,8 @@ describe('useAgentInbox', () => {
 			expect(result.current[0].lastMessage).toBe('Done: Good message.');
 		});
 
-		it('should truncate summaries longer than 90 chars', () => {
-			const longText = 'A'.repeat(100);
+		it('should truncate summaries longer than 250 chars', () => {
+			const longText = 'A'.repeat(260);
 			const sessions = [
 				makeSession({
 					id: 's1',
@@ -529,14 +529,14 @@ describe('useAgentInbox', () => {
 			const { result } = renderHook(() =>
 				useAgentInbox(sessions, [], 'all', 'newest')
 			);
-			// Question shown directly, but truncated at 90 chars
-			expect(result.current[0].lastMessage).toBe('A'.repeat(90) + '...');
-			expect(result.current[0].lastMessage.length).toBe(93); // 90 + '...'
+			// Question shown directly, but truncated at 250 chars
+			expect(result.current[0].lastMessage).toBe('A'.repeat(250) + '...');
+			expect(result.current[0].lastMessage.length).toBe(253); // 250 + '...'
 		});
 
-		it('should not truncate summaries exactly at 90 chars', () => {
-			// "Done: " is 6 chars, so AI text of 84 chars → total 90 chars
-			const exactText = 'B'.repeat(84) + '.';
+		it('should not truncate summaries exactly at 250 chars', () => {
+			// "Done: " is 6 chars, so AI text of 244 chars → total 250 chars
+			const exactText = 'B'.repeat(244) + '.';
 			const sessions = [
 				makeSession({
 					id: 's1',
@@ -555,7 +555,7 @@ describe('useAgentInbox', () => {
 			);
 			// "Done: " (6) + firstSentence of text = total
 			const summary = result.current[0].lastMessage;
-			expect(summary.length).toBeLessThanOrEqual(93); // at most 90+3
+			expect(summary.length).toBeLessThanOrEqual(253); // at most 250+3
 		});
 
 		it('should handle log entries with null text gracefully', () => {
