@@ -113,7 +113,9 @@ Use TABS for indentation. Run `npx vitest run --reporter=verbose 2>&1 | tail -40
 
 ## Task 4: Add tests for byAgent sort mode
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/__tests__/renderer/hooks/useAgentInbox.test.ts`. Add a new `describe('byAgent sort mode', ...)` block. Test cases:
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/__tests__/renderer/hooks/useAgentInbox.test.ts`. Add a new `describe('byAgent sort mode', ...)` block. Test cases:
+
+> **Note:** Added 7 hook tests in `describe('byAgent sort mode')` and 7 component tests in `describe('byAgent sort mode')`. All 14 tests pass. Hook tests total: 52 passed. Component tests total: 140 passed.
 
 **Hook tests:**
 

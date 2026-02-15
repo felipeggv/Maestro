@@ -958,6 +958,183 @@ describe('useAgentInbox', () => {
 		});
 	});
 
+	describe('byAgent sort mode', () => {
+		it('groups items by sessionName', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Agent Alpha',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'a' }] })],
+				}),
+				makeSession({
+					id: 's2',
+					name: 'Agent Bravo',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't2', hasUnread: true, logs: [{ id: 'l2', timestamp: 2000, source: 'ai' as const, text: 'b' }] })],
+				}),
+				makeSession({
+					id: 's3',
+					name: 'Agent Charlie',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't3', hasUnread: true, logs: [{ id: 'l3', timestamp: 3000, source: 'ai' as const, text: 'c' }] })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			expect(result.current).toHaveLength(3);
+			// Items should be grouped by sessionName — same-name items should be adjacent
+			const names = result.current.map(i => i.sessionName);
+			// Each name should appear as a contiguous block
+			const uniqueNames = [...new Set(names)];
+			expect(uniqueNames).toHaveLength(3);
+		});
+
+		it('places agents with unreads before agents without', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Agent NoUnread',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: false, logs: [{ id: 'l1', timestamp: 3000, source: 'ai' as const, text: 'a' }] })],
+				}),
+				makeSession({
+					id: 's2',
+					name: 'Agent HasUnread',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't2', hasUnread: true, logs: [{ id: 'l2', timestamp: 1000, source: 'ai' as const, text: 'b' }] })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			expect(result.current).toHaveLength(2);
+			// Agent with unreads should come first
+			expect(result.current[0].sessionName).toBe('Agent HasUnread');
+			expect(result.current[1].sessionName).toBe('Agent NoUnread');
+		});
+
+		it('sorts by unread count descending among unread agents', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Agent B',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'a' }] })],
+				}),
+				makeSession({
+					id: 's2',
+					name: 'Agent A',
+					state: 'idle',
+					aiTabs: [
+						makeTab({ id: 't2', hasUnread: true, logs: [{ id: 'l2', timestamp: 2000, source: 'ai' as const, text: 'b' }] }),
+						makeTab({ id: 't3', hasUnread: true, logs: [{ id: 'l3', timestamp: 3000, source: 'ai' as const, text: 'c' }] }),
+						makeTab({ id: 't4', hasUnread: true, logs: [{ id: 'l4', timestamp: 4000, source: 'ai' as const, text: 'd' }] }),
+					],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			// Agent A has 3 unreads, Agent B has 1 → Agent A should come first
+			expect(result.current[0].sessionName).toBe('Agent A');
+			// All Agent A items should be contiguous before Agent B
+			expect(result.current[1].sessionName).toBe('Agent A');
+			expect(result.current[2].sessionName).toBe('Agent A');
+			expect(result.current[3].sessionName).toBe('Agent B');
+		});
+
+		it('sorts alphabetically among zero-unread agents', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Charlie',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: false, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'a' }] })],
+				}),
+				makeSession({
+					id: 's2',
+					name: 'Bravo',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't2', hasUnread: false, logs: [{ id: 'l2', timestamp: 2000, source: 'ai' as const, text: 'b' }] })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			expect(result.current).toHaveLength(2);
+			// Alphabetical: Bravo before Charlie
+			expect(result.current[0].sessionName).toBe('Bravo');
+			expect(result.current[1].sessionName).toBe('Charlie');
+		});
+
+		it('sorts items within agent by timestamp descending', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Agent X',
+					state: 'idle',
+					aiTabs: [
+						makeTab({ id: 't1', hasUnread: true, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'old' }] }),
+						makeTab({ id: 't2', hasUnread: true, logs: [{ id: 'l2', timestamp: 5000, source: 'ai' as const, text: 'new' }] }),
+					],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			expect(result.current).toHaveLength(2);
+			// Newest first within agent group
+			expect(result.current[0].tabId).toBe('t2');
+			expect(result.current[1].tabId).toBe('t1');
+		});
+
+		it('handles single-tab sessions correctly', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Solo Agent',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'hello' }] })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			expect(result.current).toHaveLength(1);
+			expect(result.current[0].sessionName).toBe('Solo Agent');
+			// Single-tab session should have no tabName
+			expect(result.current[0].tabName).toBeUndefined();
+		});
+
+		it('handles identical session names (stable sort)', () => {
+			const sessions = [
+				makeSession({
+					id: 's1',
+					name: 'Same Name',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't1', hasUnread: true, logs: [{ id: 'l1', timestamp: 1000, source: 'ai' as const, text: 'a' }] })],
+				}),
+				makeSession({
+					id: 's2',
+					name: 'Same Name',
+					state: 'idle',
+					aiTabs: [makeTab({ id: 't2', hasUnread: true, logs: [{ id: 'l2', timestamp: 2000, source: 'ai' as const, text: 'b' }] })],
+				}),
+			];
+			const { result } = renderHook(() =>
+				useAgentInbox(sessions, [], 'all', 'byAgent')
+			);
+			// Should not crash, and items should be grouped under same name
+			expect(result.current).toHaveLength(2);
+			expect(result.current[0].sessionName).toBe('Same Name');
+			expect(result.current[1].sessionName).toBe('Same Name');
+			// Newest first within group
+			expect(result.current[0].timestamp).toBeGreaterThan(result.current[1].timestamp);
+		});
+	});
+
 	describe('memoization', () => {
 		it('should return same reference when inputs do not change', () => {
 			const sessions = [

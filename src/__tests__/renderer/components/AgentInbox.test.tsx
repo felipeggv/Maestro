@@ -2792,6 +2792,227 @@ describe('AgentInbox', () => {
 	});
 
 	// ==========================================================================
+	// By Agent sort mode (component tests)
+	// ==========================================================================
+	describe('byAgent sort mode', () => {
+		it('shows By Agent option in sort controls', () => {
+			const { container } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const sortControl = container.querySelector('[aria-label="Sort sessions"]');
+			expect(sortControl).toBeTruthy();
+			const buttons = sortControl!.querySelectorAll('button');
+			expect(buttons.length).toBe(4);
+			expect(buttons[3].textContent).toBe('By Agent');
+		});
+
+		it('renders group headers with agent names in byAgent mode', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Alpha Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
+				}),
+				createSession({
+					id: 's2',
+					name: 'Beta Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't2', hasUnread: true })] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Switch to By Agent sort
+			fireEvent.click(screen.getByText('By Agent'));
+			// Group headers should appear with agent names
+			const alphaMatches = screen.getAllByText('Alpha Agent');
+			expect(alphaMatches.length).toBeGreaterThanOrEqual(2); // header + card
+			const betaMatches = screen.getAllByText('Beta Agent');
+			expect(betaMatches.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it('byAgent headers show agent type in parentheses', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'My Agent',
+					toolType: 'claude-code',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			fireEvent.click(screen.getByText('By Agent'));
+			// The header should show "(claude-code)" after the agent name
+			expect(screen.getByText('(claude-code)')).toBeTruthy();
+		});
+
+		it('byAgent headers show unread badge only when unreadCount > 0', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Unread Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
+				}),
+				createSession({
+					id: 's2',
+					name: 'Read Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Switch to 'All' filter first so we see both, then switch to By Agent
+			fireEvent.click(screen.getByText('All'));
+			fireEvent.click(screen.getByText('By Agent'));
+			// "1 unread" badge should appear for the agent with unreads
+			expect(screen.getByText('1 unread')).toBeTruthy();
+			// No "0 unread" should appear (badge is hidden for zero)
+			expect(screen.queryByText('0 unread')).toBeNull();
+		});
+
+		it('zero-unread agents auto-collapse when switching to byAgent', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Active Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
+				}),
+				createSession({
+					id: 's2',
+					name: 'Quiet Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Switch to 'All' filter so both are visible, then to By Agent
+			fireEvent.click(screen.getByText('All'));
+			fireEvent.click(screen.getByText('By Agent'));
+			// Active Agent appears in both header + card (2 matches = not collapsed)
+			const activeMatches = screen.getAllByText('Active Agent');
+			expect(activeMatches.length).toBeGreaterThanOrEqual(2);
+			// Quiet Agent header should exist but its item should be hidden (collapsed)
+			// The header text "Quiet Agent" appears once (in header only), the card is hidden
+			const quietMatches = screen.getAllByText('Quiet Agent');
+			// Only 1 match = just the header (card is hidden due to collapse)
+			expect(quietMatches.length).toBe(1);
+			// Collapsed group should show ChevronRight
+			expect(screen.getByTestId('chevron-right-icon')).toBeTruthy();
+		});
+
+		it('switching away from byAgent clears collapsed state', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Agent One',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
+				}),
+				createSession({
+					id: 's2',
+					name: 'Agent Two',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Switch to All filter + By Agent sort (Agent Two gets auto-collapsed)
+			fireEvent.click(screen.getByText('All'));
+			fireEvent.click(screen.getByText('By Agent'));
+			// Agent Two card is collapsed
+			const agentTwoInByAgent = screen.getAllByText('Agent Two');
+			expect(agentTwoInByAgent.length).toBe(1); // only header
+
+			// Switch to Newest sort — collapsed state should clear
+			fireEvent.click(screen.getByText('Newest'));
+			// Now Agent Two card should be visible (no group headers, no collapse)
+			expect(screen.getByText('Agent Two')).toBeTruthy();
+		});
+
+		it('keyboard navigation skips collapsed group items in byAgent', () => {
+			const sessions = [
+				createSession({
+					id: 's1',
+					name: 'Open Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
+				}),
+				createSession({
+					id: 's2',
+					name: 'Closed Agent',
+					state: 'idle',
+					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
+				}),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			// All filter + By Agent sort
+			fireEvent.click(screen.getByText('All'));
+			fireEvent.click(screen.getByText('By Agent'));
+
+			// "Closed Agent" is auto-collapsed, so its card is not rendered
+			// Only 1 option card should be visible (Open Agent)
+			const options = screen.getAllByRole('option');
+			expect(options.length).toBe(1);
+
+			// Enter on the visible item should navigate to Open Agent
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: 'Enter' });
+			expect(onNavigateToSession).toHaveBeenCalledWith('s1', 't1');
+		});
+	});
+
+	// ==========================================================================
 	// Close button hover handlers
 	// ==========================================================================
 	describe('close button hover handlers', () => {
