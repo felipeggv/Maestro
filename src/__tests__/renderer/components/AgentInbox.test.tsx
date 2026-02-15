@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import AgentInbox from '../../../renderer/components/AgentInbox';
 import type { Session, Group, Theme } from '../../../renderer/types';
+import { useModalStore } from '../../../renderer/stores/modalStore';
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
@@ -224,6 +225,8 @@ describe('AgentInbox', () => {
 		mockRegisterLayer.mockClear();
 		mockUnregisterLayer.mockClear();
 		mockUpdateLayerHandler.mockClear();
+		// Reset modalStore to clean state between tests
+		useModalStore.setState({ modals: new Map() });
 	});
 
 	afterEach(() => {
@@ -2013,6 +2016,221 @@ describe('AgentInbox', () => {
 			fireEvent.keyDown(dialog, { key: 'Enter' });
 			expect(onNavigateToSession).toHaveBeenCalledWith('s1', 't1');
 			expect(onClose).toHaveBeenCalled();
+		});
+	});
+
+	// ==========================================================================
+	// Visual polish — multi-line messages & pipe separators
+	// ==========================================================================
+	describe('visual polish — multi-line & pipes', () => {
+		it('lastMessage displays up to 3 lines (WebkitLineClamp: 3)', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const lastMsg = screen.getByText('Waiting: awaiting your response');
+			expect(lastMsg.style.WebkitLineClamp).toBe('3');
+		});
+
+		it('lastMessage does NOT use whiteSpace: nowrap', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const lastMsg = screen.getByText('Waiting: awaiting your response');
+			expect(lastMsg.style.whiteSpace).not.toBe('nowrap');
+		});
+
+		it('Edit3 pencil icon is NOT rendered in Row 1', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			const { container } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// No Edit3 icon should exist anywhere in the card
+			expect(container.querySelector('[data-testid="edit3-icon"]')).toBeNull();
+		});
+
+		it('pipe separator NOT rendered when groupName is undefined', () => {
+			// Session without groupId → no groupName → no leading pipe
+			const sessions = [createInboxSession('s1', 't1')];
+			const { container } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const option = container.querySelector('[role="option"]');
+			const textContent = option?.textContent ?? '';
+			// No pipe character before the session name
+			expect(textContent.startsWith('|')).toBe(false);
+			// The textContent should start with the number badge or session name, not a pipe
+			expect(textContent).not.toMatch(/^\s*\|/);
+		});
+
+		it('cards beyond index 9 do not show numeric badge', () => {
+			const sessions = Array.from({ length: 12 }, (_, i) =>
+				createInboxSession(`s${i}`, `t${i}`)
+			);
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const badges = screen.getAllByTestId('number-badge');
+			// Only first 10 items (index 0-9) get number badges
+			expect(badges.length).toBe(10);
+		});
+
+		it('pressing Meta+5 selects and opens fifth card', () => {
+			const sessions = Array.from({ length: 6 }, (_, i) =>
+				createInboxSession(`s${i}`, `t${i}`)
+			);
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onNavigateToSession={onNavigateToSession}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: '5', metaKey: true });
+			expect(onNavigateToSession).toHaveBeenCalledWith('s4', 't4');
+			expect(onClose).toHaveBeenCalled();
+		});
+	});
+
+	// ==========================================================================
+	// Preference persistence (modalStore)
+	// ==========================================================================
+	describe('preference persistence', () => {
+		// Seed the modal store with initial agentInbox data
+		// (simulates what the app does when opening the inbox via setAgentInboxOpen)
+		function seedInboxStore() {
+			const { openModal } = useModalStore.getState();
+			openModal('agentInbox', {
+				filterMode: 'unread',
+				sortMode: 'newest',
+				isExpanded: false,
+			});
+		}
+
+		it('filter mode persists after modal close and reopen', () => {
+			seedInboxStore();
+			const sessions = [createInboxSession('s1', 't1')];
+			// First render — default filter is 'unread'
+			const { unmount } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Switch to 'all' filter
+			fireEvent.click(screen.getByText('All'));
+			// Verify 'All' is now pressed
+			const filterControl = screen.getByRole('dialog').querySelector('[aria-label="Filter sessions"]');
+			const allButton = filterControl!.querySelectorAll('button')[0];
+			expect(allButton.getAttribute('aria-pressed')).toBe('true');
+
+			// Unmount (simulates closing modal)
+			unmount();
+
+			// Re-render (simulates reopening modal) — store retains the data
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Filter should persist as 'all'
+			const filterControl2 = screen.getByRole('dialog').querySelector('[aria-label="Filter sessions"]');
+			const allButton2 = filterControl2!.querySelectorAll('button')[0];
+			expect(allButton2.getAttribute('aria-pressed')).toBe('true');
+		});
+
+		it('sort mode persists after modal close and reopen', () => {
+			seedInboxStore();
+			const sessions = [createInboxSession('s1', 't1')];
+			const { unmount } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Switch to 'By Agent' sort
+			fireEvent.click(screen.getByText('By Agent'));
+			const sortControl = screen.getByRole('dialog').querySelector('[aria-label="Sort sessions"]');
+			const byAgentButton = sortControl!.querySelectorAll('button')[3];
+			expect(byAgentButton.getAttribute('aria-pressed')).toBe('true');
+
+			unmount();
+
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const sortControl2 = screen.getByRole('dialog').querySelector('[aria-label="Sort sessions"]');
+			const byAgentButton2 = sortControl2!.querySelectorAll('button')[3];
+			expect(byAgentButton2.getAttribute('aria-pressed')).toBe('true');
+		});
+
+		it('expanded state persists after modal close and reopen', () => {
+			seedInboxStore();
+			const { unmount } = render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Expand the modal
+			fireEvent.click(screen.getByTitle('Expand'));
+			expect(screen.getByRole('dialog').className).toContain('w-[1200px]');
+
+			unmount();
+
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			// Expanded state should persist
+			expect(screen.getByRole('dialog').className).toContain('w-[1200px]');
 		});
 	});
 

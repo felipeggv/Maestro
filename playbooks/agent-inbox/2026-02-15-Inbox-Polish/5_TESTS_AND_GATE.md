@@ -49,7 +49,9 @@ Run `npx vitest run --reporter=verbose 2>&1 | tail -80` after fixes. Use TABS fo
 
 ## Task 2: Add tests for visual polish (expand toggle, pipes, multi-line)
 
-- [ ] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/__tests__/renderer/components/AgentInbox.test.tsx`. Add a new `describe('visual polish', ...)` block with these test cases:
+- [x] Open `/Users/felipegobbi/Documents/Vibework/Maestro/src/__tests__/renderer/components/AgentInbox.test.tsx`. Add a new `describe('visual polish', ...)` block with these test cases:
+
+> **Note:** Most of the 21 specified tests already existed across multiple describe blocks from prior phases (expand toggle, pipes, numeric badges, footer, etc.). Added 9 net-new tests: `describe('visual polish — multi-line & pipes')` with 6 tests (WebkitLineClamp:3, no whiteSpace:nowrap, no Edit3 icon, no pipe without groupName, cards beyond 9 no badge, Meta+5) and `describe('preference persistence')` with 3 tests (filter/sort/expand persist via modalStore). Also imported `useModalStore` and added store reset in `beforeEach`. Total: 128 passing tests.
 
 **Expand toggle tests:**
 
