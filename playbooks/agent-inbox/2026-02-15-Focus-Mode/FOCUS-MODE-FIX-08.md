@@ -80,12 +80,19 @@ The `FocusSidebar` component in `FocusModeView.tsx` (~line 298) groups items by 
 
   5. Add `useState` to the imports inside `FocusSidebar` if not already used there (it IS already imported at the file top level, so it's available).
 
-- [ ] **Invoke `/AIOS:agents:qa` to validate.** The QA agent must:
+- [x] **Invoke `/AIOS:agents:qa` to validate.** The QA agent must:
   1. Run `npx tsc --noEmit 2>&1 | head -20` — zero new errors.
   2. Run `npx vitest run src/__tests__/renderer/components/FocusModeView.test.tsx src/__tests__/renderer/components/AgentInbox.test.tsx 2>&1 | tail -15` — all tests passing.
   3. Verify that `ChevronDown` was added to the lucide-react import AND to the lucide-react mocks in both test files (`AgentInbox.test.tsx` and `FocusModeView.test.tsx`).
   4. Verify sidebar items no longer reference `lastMessage`.
   5. If tests fail due to missing icon mocks, add the mock and re-run.
+
+  > **QA Results (2026-02-16):**
+  > - `tsc --noEmit`: 3 pre-existing errors (unused `React` in History files), zero new errors from sidebar changes
+  > - Tests: **196/196 passed** (48 FocusModeView + 148 AgentInbox)
+  > - `ChevronDown` confirmed in lucide-react mock in both `FocusModeView.test.tsx` (line 55) and `AgentInbox.test.tsx` (line 25)
+  > - `lastMessage` grep on `FocusModeView.tsx`: **0 matches** — fully removed from sidebar item rendering
+  > - No icon mock fixes needed — all mocks were already in place
 
 - [ ] **Invoke `/AIOS:agents:analyst` to review.** The analyst must:
   1. Read the `FocusSidebar` component in `FocusModeView.tsx`.
