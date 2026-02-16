@@ -173,7 +173,7 @@ Before implementing, trace the data flow:
 
 ## Handle Item Changes (Prev/Next)
 
-- [ ] **Ensure the conversation tail updates and scrolls when navigating between items.** The `logs` useMemo already depends on `item.sessionId` and `item.tabId`, so it will recompute. The scroll-to-bottom `useEffect` also depends on these, so it will auto-scroll. Verify this works by reviewing the dependency arrays. No code changes needed if deps are correct — just verify.
+- [x] **Ensure the conversation tail updates and scrolls when navigating between items.** ✓ Verified: `logs` useMemo deps `[sessions, item.sessionId, item.tabId]` recompute on navigation. Auto-scroll `useEffect` deps `[logs, item.sessionId, item.tabId]` trigger scroll-to-bottom. `sessionExists` guard renders fallback when session is deleted. The `logs` useMemo already depends on `item.sessionId` and `item.tabId`, so it will recompute. The scroll-to-bottom `useEffect` also depends on these, so it will auto-scroll. Verify this works by reviewing the dependency arrays. No code changes needed if deps are correct — just verify.
 
   Also handle the edge case where `sessions.find()` returns undefined (session was deleted while focus mode is open). Add an early check in the component body (before the log computation):
 
@@ -195,7 +195,7 @@ Before implementing, trace the data flow:
 
 ## Verification Gate
 
-- [ ] **Run full verification.** Execute:
+- [x] **Run full verification.** Execute:
   ```bash
   cd ~/Documents/Vibework/Maestro && npx tsc --noEmit && npx vitest run && npx eslint src/renderer/components/AgentInbox/ --ext .ts,.tsx
   ```
@@ -205,7 +205,7 @@ Before implementing, trace the data flow:
 
 ## Commit
 
-- [ ] **Commit this phase.**
+- [x] **Commit this phase.** ✓ Committed as `ca70c670`. Push to remote deferred (403 permission — needs repo credentials).
   ```bash
   git add src/renderer/components/AgentInbox/FocusModeView.tsx
   git commit -m "FOCUS-MODE: Phase 04 — conversation tail with LogBubble rendering (lucide icons)"
