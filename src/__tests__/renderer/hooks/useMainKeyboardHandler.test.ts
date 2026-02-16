@@ -1249,8 +1249,8 @@ describe('useMainKeyboardHandler', () => {
 		});
 	});
 
-	describe('agentInbox zero-items guard', () => {
-		it('should show toast and NOT open modal when no pending items', () => {
+	describe('agentInbox zero-items fallback', () => {
+		it('should open modal with all filter when no pending items', () => {
 			const { result } = renderHook(() => useMainKeyboardHandler());
 
 			const mockSetAgentInboxOpen = vi.fn();
@@ -1279,19 +1279,13 @@ describe('useMainKeyboardHandler', () => {
 				);
 			});
 
-			// Toast should be shown
-			expect(mockAddToast).toHaveBeenCalledWith(
-				expect.objectContaining({
-					type: 'info',
-					title: 'Unified Inbox',
-					message: 'No pending items',
-				})
-			);
-			// Modal should NOT open
-			expect(mockSetAgentInboxOpen).not.toHaveBeenCalled();
+			// Modal should always open (defaults to 'all' filter when no actionable items)
+			expect(mockSetAgentInboxOpen).toHaveBeenCalledWith(true);
+			// No toast — modal opens instead
+			expect(mockAddToast).not.toHaveBeenCalled();
 		});
 
-		it('should show toast when sessions array is empty', () => {
+		it('should open modal when sessions array is empty', () => {
 			const { result } = renderHook(() => useMainKeyboardHandler());
 
 			const mockSetAgentInboxOpen = vi.fn();
@@ -1318,8 +1312,9 @@ describe('useMainKeyboardHandler', () => {
 				);
 			});
 
-			expect(mockAddToast).toHaveBeenCalled();
-			expect(mockSetAgentInboxOpen).not.toHaveBeenCalled();
+			// Modal should always open
+			expect(mockSetAgentInboxOpen).toHaveBeenCalledWith(true);
+			expect(mockAddToast).not.toHaveBeenCalled();
 		});
 
 		it('should open modal when sessions have waiting_input state', () => {

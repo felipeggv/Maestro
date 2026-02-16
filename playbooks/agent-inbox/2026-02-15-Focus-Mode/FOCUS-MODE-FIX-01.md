@@ -56,4 +56,5 @@ The main chat uses `LogItemComponent` from `TerminalOutput.tsx` which renders vi
 
   7. **Keep `MAX_LOG_ENTRIES = 20`** for now as a performance guard, but consider increasing to 50 since markdown rendering is lazy.
 
-- [ ] **Run verification gate:** Execute `npx tsc --noEmit 2>&1 | head -20 && npx vitest run 2>&1 | tail -10` to confirm types check and tests pass.
+- [x] **Run verification gate:** Execute `npx tsc --noEmit 2>&1 | head -20 && npx vitest run 2>&1 | tail -10` to confirm types check and tests pass.
+  - **Note:** TSC shows 3 pre-existing TS6133 errors (unused React imports in History components — unrelated to Focus Mode). All 460 test files pass (19,679 tests, 0 failures). Fixed 2 stale tests in `useMainKeyboardHandler.test.ts` that still expected old "toast on zero items" behavior — updated to match new "always open modal with 'all' filter" behavior.
