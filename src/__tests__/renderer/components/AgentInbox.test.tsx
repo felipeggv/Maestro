@@ -3155,7 +3155,7 @@ describe('AgentInbox', () => {
 			expect(screen.getByText('Unified Inbox')).toBeTruthy();
 		});
 
-		it('ArrowLeft navigates to previous item in focus mode', () => {
+		it('Cmd+ArrowLeft navigates to previous item in focus mode', () => {
 			const sessions = [
 				createInboxSession('s1', 't1'),
 				createInboxSession('s2', 't2'),
@@ -3173,13 +3173,13 @@ describe('AgentInbox', () => {
 			fireEvent.keyDown(dialog, { key: 'f' });
 			// Should show "1 / 2" initially
 			expect(screen.getByText('1 / 2')).toBeTruthy();
-			// Navigate with ArrowLeft (wraps around)
-			fireEvent.keyDown(dialog, { key: 'ArrowLeft' });
+			// Navigate with Cmd+ArrowLeft (wraps around)
+			fireEvent.keyDown(dialog, { key: 'ArrowLeft', metaKey: true });
 			// Should now be "2 / 2"
 			expect(screen.getByText('2 / 2')).toBeTruthy();
 		});
 
-		it('ArrowRight navigates to next item in focus mode', () => {
+		it('Cmd+ArrowRight navigates to next item in focus mode', () => {
 			const sessions = [
 				createInboxSession('s1', 't1'),
 				createInboxSession('s2', 't2'),
@@ -3196,12 +3196,34 @@ describe('AgentInbox', () => {
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });
 			expect(screen.getByText('1 / 2')).toBeTruthy();
-			// Navigate with ArrowRight
-			fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+			// Navigate with Cmd+ArrowRight
+			fireEvent.keyDown(dialog, { key: 'ArrowRight', metaKey: true });
 			expect(screen.getByText('2 / 2')).toBeTruthy();
 		});
 
-		it('M key marks as read in focus mode', () => {
+		it('plain ArrowLeft/Right does NOT navigate in focus mode', () => {
+			const sessions = [
+				createInboxSession('s1', 't1'),
+				createInboxSession('s2', 't2'),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			// Enter focus mode
+			fireEvent.keyDown(dialog, { key: 'f' });
+			expect(screen.getByText('1 / 2')).toBeTruthy();
+			// Plain ArrowRight without meta should NOT navigate
+			fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+			expect(screen.getByText('1 / 2')).toBeTruthy();
+		});
+
+		it('M key does NOT mark as read in focus mode (shortcut removed)', () => {
 			const sessions = [createInboxSession('s1', 't1')];
 			const onMarkAsRead = vi.fn();
 			render(
@@ -3216,9 +3238,11 @@ describe('AgentInbox', () => {
 			const dialog = screen.getByRole('dialog');
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });
-			// Press M to mark as read
+			// M shortcut was removed — auto-read on view is used instead
+			// onMarkAsRead may be called from auto-read useEffect, but NOT from M key
+			onMarkAsRead.mockClear();
 			fireEvent.keyDown(dialog, { key: 'm' });
-			expect(onMarkAsRead).toHaveBeenCalledWith('s1', 't1');
+			expect(onMarkAsRead).not.toHaveBeenCalled();
 		});
 	});
 });

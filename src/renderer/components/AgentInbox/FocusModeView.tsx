@@ -325,12 +325,7 @@ export default function FocusModeView({
 			onQuickReply(item.sessionId, item.tabId, text);
 		}
 		setReplyText('');
-		// Auto-advance to next item after reply
-		if (items.length > 1) {
-			const nextIndex = (currentIndex + 1) % items.length;
-			onNavigateItem(nextIndex);
-		}
-	}, [replyText, item, items, currentIndex, onQuickReply, onNavigateItem]);
+	}, [replyText, item, onQuickReply]);
 
 	const handleOpenAndReply = useCallback(() => {
 		const text = replyText.trim();
@@ -353,6 +348,13 @@ export default function FocusModeView({
 			return () => clearTimeout(timer);
 		}
 	}, [item.sessionId, item.tabId]);
+
+	// Auto-mark as read when viewing an item in focus mode
+	useEffect(() => {
+		if (item.hasUnread && onMarkAsRead) {
+			onMarkAsRead(item.sessionId, item.tabId);
+		}
+	}, [item.sessionId, item.tabId, item.hasUnread, onMarkAsRead]);
 
 	return (
 		<div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
@@ -420,35 +422,6 @@ export default function FocusModeView({
 					)}
 				</div>
 
-				{/* Mark Read button */}
-				<button
-					onClick={() => {
-						if (onMarkAsRead) {
-							onMarkAsRead(item.sessionId, item.tabId);
-						}
-						// Auto-advance after marking as read
-						if (items.length > 1) {
-							const nextIndex = (currentIndex + 1) % items.length;
-							onNavigateItem(nextIndex);
-						}
-					}}
-					className="text-xs px-2 py-1 rounded transition-colors"
-					style={{
-						border: `1px solid ${theme.colors.border}`,
-						color: theme.colors.textDim,
-						backgroundColor: 'transparent',
-					}}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.backgroundColor = 'transparent';
-					}}
-					title="Mark as read and advance (M)"
-				>
-					✓ Read
-				</button>
-
 				{/* Right: Close button */}
 				<button
 					onClick={onClose}
@@ -485,6 +458,9 @@ export default function FocusModeView({
 				)}
 				{hasValidContext && (
 					<span style={{ color: contextColor }}>Context: {item.contextUsage}%</span>
+				)}
+				{item.starred && (
+					<span style={{ color: theme.colors.warning, fontSize: 12 }}>★ Starred</span>
 				)}
 				<span
 					style={{
@@ -654,7 +630,7 @@ export default function FocusModeView({
 					onMouseLeave={(e) => {
 						e.currentTarget.style.backgroundColor = 'transparent';
 					}}
-					title="Previous item (←)"
+					title="Previous item (⌘←)"
 				>
 					<ChevronLeft className="w-3 h-3" />
 					Prev
@@ -670,7 +646,7 @@ export default function FocusModeView({
 						{currentIndex + 1} / {items.length}
 					</span>
 					<span className="text-xs" style={{ color: theme.colors.textDim, opacity: 0.6 }}>
-						←→ Navigate · M Read · Esc Back
+						⌘←→ Navigate · Esc Back
 					</span>
 				</div>
 
@@ -694,7 +670,7 @@ export default function FocusModeView({
 					onMouseLeave={(e) => {
 						e.currentTarget.style.backgroundColor = 'transparent';
 					}}
-					title="Next item (→)"
+					title="Next item (⌘→)"
 				>
 					Next
 					<ChevronRight className="w-3 h-3" />

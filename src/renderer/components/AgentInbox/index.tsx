@@ -131,26 +131,18 @@ export default function AgentInbox({
 						handleExitFocus();
 						return;
 					case 'ArrowLeft':
-						e.preventDefault();
-						if (items.length > 1) {
-							setFocusIndex((prev) => (prev - 1 + items.length) % items.length);
+						if (e.metaKey || e.ctrlKey) {
+							e.preventDefault();
+							if (items.length > 1) {
+								setFocusIndex((prev) => (prev - 1 + items.length) % items.length);
+							}
 						}
 						return;
 					case 'ArrowRight':
-						e.preventDefault();
-						if (items.length > 1) {
-							setFocusIndex((prev) => (prev + 1) % items.length);
-						}
-						return;
-					case 'm':
-					case 'M':
-						if (document.activeElement?.tagName !== 'TEXTAREA') {
+						if (e.metaKey || e.ctrlKey) {
 							e.preventDefault();
-							if (onMarkAsRead && items[focusIndex]) {
-								onMarkAsRead(items[focusIndex].sessionId, items[focusIndex].tabId);
-								if (items.length > 1) {
-									setFocusIndex((prev) => (prev + 1) % items.length);
-								}
+							if (items.length > 1) {
+								setFocusIndex((prev) => (prev + 1) % items.length);
 							}
 						}
 						return;
@@ -182,7 +174,7 @@ export default function AgentInbox({
 				listKeyDownRef.current(e);
 			}
 		},
-		[viewMode, items, selectedIndex, focusIndex, onMarkAsRead, handleEnterFocus, handleExitFocus]
+		[viewMode, items, selectedIndex, focusIndex, handleEnterFocus, handleExitFocus]
 	);
 
 	return (

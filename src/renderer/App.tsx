@@ -917,8 +917,8 @@ function MaestroConsoleInner() {
 	// Agent Inbox: Quick Reply — sends directly to PTY, stays in modal
 	const handleQuickReply = useCallback(
 		(sessionId: string, tabId: string, text: string) => {
-			// Write directly to the agent's PTY stdin
-			window.maestro.process.write(sessionId, text + '\n').catch((err) => {
+			// Write directly to the agent's PTY stdin (compound key: sessionId-ai-tabId)
+			window.maestro.process.write(`${sessionId}-ai-${tabId}`, text + '\n').catch((err) => {
 				console.error('Quick reply failed:', err);
 			});
 

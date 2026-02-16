@@ -436,7 +436,7 @@ describe('FocusModeView (reply)', () => {
 		expect(textarea.value).toBe('');
 	});
 
-	it('18. auto-advances after quick reply', () => {
+	it('18. does NOT auto-advance after quick reply', () => {
 		const onQuickReply = vi.fn();
 		const onNavigateItem = vi.fn();
 		renderFocusView({
@@ -453,7 +453,7 @@ describe('FocusModeView (reply)', () => {
 		fireEvent.change(textarea, { target: { value: 'hello' } });
 		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: false });
 
-		expect(onNavigateItem).toHaveBeenCalledWith(1);
+		expect(onNavigateItem).not.toHaveBeenCalled();
 	});
 
 	it('19. does NOT auto-advance after open-and-reply', () => {
@@ -481,42 +481,28 @@ describe('FocusModeView (reply)', () => {
 // ============================================================================
 // Mark as Read tests
 // ============================================================================
-describe('FocusModeView (mark as read)', () => {
-	it('20. renders Mark Read button', () => {
+describe('FocusModeView (auto-read)', () => {
+	it('20. auto-marks item as read when it has unread', () => {
+		const onMarkAsRead = vi.fn();
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1', hasUnread: true })],
+			onMarkAsRead,
+		});
+		expect(onMarkAsRead).toHaveBeenCalledWith('s1', 't1');
+	});
+
+	it('21. does NOT call onMarkAsRead when item is already read', () => {
+		const onMarkAsRead = vi.fn();
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1', hasUnread: false })],
+			onMarkAsRead,
+		});
+		expect(onMarkAsRead).not.toHaveBeenCalled();
+	});
+
+	it('22. no Mark Read button exists', () => {
 		renderFocusView();
-		expect(screen.getByTitle('Mark as read and advance (M)')).toBeDefined();
-		expect(screen.getByText('✓ Read')).toBeDefined();
-	});
-
-	it('21. calls onMarkAsRead on button click', () => {
-		const onMarkAsRead = vi.fn();
-		renderFocusView({
-			items: [createItem({ sessionId: 's1', tabId: 't1' })],
-			onMarkAsRead,
-		});
-		const markReadButton = screen.getByTitle('Mark as read and advance (M)');
-		fireEvent.click(markReadButton);
-		expect(onMarkAsRead).toHaveBeenCalledWith('s1', 't1');
-	});
-
-	it('22. auto-advances after marking as read', () => {
-		const onMarkAsRead = vi.fn();
-		const onNavigateItem = vi.fn();
-		renderFocusView({
-			items: [
-				createItem({ sessionId: 's1', tabId: 't1' }),
-				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent 2' }),
-			],
-			currentIndex: 0,
-			onMarkAsRead,
-			onNavigateItem,
-		});
-
-		const markReadButton = screen.getByTitle('Mark as read and advance (M)');
-		fireEvent.click(markReadButton);
-
-		expect(onMarkAsRead).toHaveBeenCalledWith('s1', 't1');
-		expect(onNavigateItem).toHaveBeenCalledWith(1);
+		expect(screen.queryByText('✓ Read')).toBeNull();
 	});
 });
 
@@ -536,7 +522,7 @@ describe('FocusModeView (navigation)', () => {
 			onNavigateItem,
 		});
 
-		const prevButton = screen.getByTitle('Previous item (←)');
+		const prevButton = screen.getByTitle('Previous item (⌘←)');
 		fireEvent.click(prevButton);
 
 		// (1 - 1 + 3) % 3 = 0
@@ -555,7 +541,7 @@ describe('FocusModeView (navigation)', () => {
 			onNavigateItem,
 		});
 
-		const nextButton = screen.getByTitle('Next item (→)');
+		const nextButton = screen.getByTitle('Next item (⌘→)');
 		fireEvent.click(nextButton);
 
 		// (1 + 1) % 3 = 2
@@ -566,8 +552,8 @@ describe('FocusModeView (navigation)', () => {
 		renderFocusView({
 			items: [createItem()],
 		});
-		const prevButton = screen.getByTitle('Previous item (←)').closest('button');
-		const nextButton = screen.getByTitle('Next item (→)').closest('button');
+		const prevButton = screen.getByTitle('Previous item (⌘←)').closest('button');
+		const nextButton = screen.getByTitle('Next item (⌘→)').closest('button');
 		expect(prevButton?.disabled).toBe(true);
 		expect(nextButton?.disabled).toBe(true);
 	});
@@ -607,8 +593,8 @@ describe('FocusModeView (ARIA)', () => {
 		renderFocusView({
 			items: [createItem()],
 		});
-		const prevButton = screen.getByTitle('Previous item (←)').closest('button');
-		const nextButton = screen.getByTitle('Next item (→)').closest('button');
+		const prevButton = screen.getByTitle('Previous item (⌘←)').closest('button');
+		const nextButton = screen.getByTitle('Next item (⌘→)').closest('button');
 		expect(prevButton?.getAttribute('aria-disabled')).toBe('true');
 		expect(nextButton?.getAttribute('aria-disabled')).toBe('true');
 	});
