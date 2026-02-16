@@ -512,6 +512,9 @@ const FILTER_OPTIONS: { value: InboxFilterMode; label: string }[] = [
 	{ value: 'starred', label: '★ Starred' },
 ];
 
+// Track the identity of the selected row so we can re-find it after rows change
+type RowIdentity = { type: 'header'; groupName: string } | { type: 'item'; sessionId: string; tabId: string };
+
 export default function InboxListView({
 	theme,
 	items,
@@ -597,28 +600,79 @@ export default function InboxListView({
 		return 0;
 	}, [rows]);
 	const [selectedRowIndex, setSelectedRowIndex] = useState(firstItemRow);
+	const selectedRowIdentityRef = useRef<RowIdentity | null>(null);
+
+	// Keep the identity ref in sync with selectedRowIndex
+	useEffect(() => {
+		const row = rows[selectedRowIndex];
+		if (!row) {
+			selectedRowIdentityRef.current = null;
+			return;
+		}
+		if (row.type === 'header') {
+			selectedRowIdentityRef.current = { type: 'header', groupName: row.groupName };
+		} else {
+			selectedRowIdentityRef.current = { type: 'item', sessionId: row.item.sessionId, tabId: row.item.tabId };
+		}
+	}, [selectedRowIndex, rows]);
 
 	// Ref to the virtualized list
 	const listRef = useRef<ListImperativeAPI | null>(null);
 	const headerRef = useRef<HTMLDivElement>(null);
 
-	// Reset to first item row when sort/filter changes rows structure
+	// Stabilize selectedRowIndex after rows change (collapse/expand/filter)
 	useEffect(() => {
 		if (rows.length === 0) {
 			setSelectedRowIndex(0);
 			return;
 		}
-		// Clamp if out of bounds
-		if (selectedRowIndex >= rows.length) {
-			for (let i = rows.length - 1; i >= 0; i--) {
-				if (rows[i].type === 'item') {
-					setSelectedRowIndex(i);
-					return;
-				}
+
+		const identity = selectedRowIdentityRef.current;
+		if (!identity) return;
+
+		// Check if the current index still points at the same identity
+		const currentRow = rows[selectedRowIndex];
+		if (currentRow) {
+			if (identity.type === 'header' && currentRow.type === 'header' && currentRow.groupName === identity.groupName) {
+				return; // Still correct
 			}
-			setSelectedRowIndex(0);
+			if (identity.type === 'item' && currentRow.type === 'item' && currentRow.item.sessionId === identity.sessionId && currentRow.item.tabId === identity.tabId) {
+				return; // Still correct
+			}
 		}
-	}, [rows.length, selectedRowIndex]);
+
+		// Identity drifted — search for the old identity in the new rows
+		for (let i = 0; i < rows.length; i++) {
+			const r = rows[i];
+			if (identity.type === 'header' && r.type === 'header' && r.groupName === identity.groupName) {
+				setSelectedRowIndex(i);
+				return;
+			}
+			if (identity.type === 'item' && r.type === 'item' && r.item.sessionId === identity.sessionId && r.item.tabId === identity.tabId) {
+				setSelectedRowIndex(i);
+				return;
+			}
+		}
+
+		// Old identity no longer in rows (collapsed away) — find nearest item or clamp
+		const clamped = Math.min(selectedRowIndex, rows.length - 1);
+		// Search downward from clamped position for an item row
+		for (let i = clamped; i < rows.length; i++) {
+			if (rows[i].type === 'item') {
+				setSelectedRowIndex(i);
+				return;
+			}
+		}
+		// Search upward
+		for (let i = clamped - 1; i >= 0; i--) {
+			if (rows[i].type === 'item') {
+				setSelectedRowIndex(i);
+				return;
+			}
+		}
+		// Only headers remain — select the first header
+		setSelectedRowIndex(0);
+	}, [rows, selectedRowIndex]);
 
 	// When sort mode or filter mode changes, reset selection to first item row
 	const prevSortForResetRef = useRef(sortMode);
