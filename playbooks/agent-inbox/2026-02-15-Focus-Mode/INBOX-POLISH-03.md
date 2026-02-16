@@ -79,7 +79,7 @@ all: { text: 'All caught up — no sessions need attention.', showIcon: true },
 
 ---
 
-- [ ] Invoke `/AIOS:agents:dev` to update the empty state message. In `src/renderer/components/AgentInbox/InboxListView.tsx`, find the `EMPTY_STATE_MESSAGES` constant (around line 37-42). Replace the `all` entry:
+- [x] Invoke `/AIOS:agents:dev` to update the empty state message. In `src/renderer/components/AgentInbox/InboxListView.tsx`, find the `EMPTY_STATE_MESSAGES` constant (around line 37-42). Replace the `all` entry:
 
   ```typescript
   // BEFORE:

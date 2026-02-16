@@ -865,12 +865,12 @@ describe('AgentInbox', () => {
 	// Empty states (filter-aware)
 	// ==========================================================================
 	describe('empty states', () => {
-		it('shows "All caught up" with checkmark icon when filter is "All" and no items', () => {
+		it('shows neutral empty state with icon when filter is "All" and no items', () => {
 			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Default filter is 'unread'; switch to 'All' to test this empty state
 			fireEvent.click(screen.getByText('All'));
 			expect(screen.getByTestId('inbox-empty-state')).toBeTruthy();
-			expect(screen.getByText('All caught up — no sessions need attention.')).toBeTruthy();
+			expect(screen.getByText('No active sessions to show.')).toBeTruthy();
 			expect(screen.getByTestId('inbox-empty-icon')).toBeTruthy();
 		});
 

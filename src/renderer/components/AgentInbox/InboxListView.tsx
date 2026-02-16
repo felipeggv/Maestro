@@ -35,7 +35,7 @@ const MODAL_FOOTER_HEIGHT = 36;
 // Empty state messages per filter mode
 // ============================================================================
 const EMPTY_STATE_MESSAGES: Record<InboxFilterMode, { text: string; showIcon: boolean }> = {
-	all: { text: 'All caught up — no sessions need attention.', showIcon: true },
+	all: { text: 'No active sessions to show.', showIcon: true },
 	unread: { text: 'No unread sessions.', showIcon: false },
 	read: { text: 'No read sessions with activity.', showIcon: false },
 	starred: { text: 'No starred sessions.', showIcon: false },
