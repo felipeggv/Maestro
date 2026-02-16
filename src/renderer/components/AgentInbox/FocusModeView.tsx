@@ -1,5 +1,5 @@
-import { useMemo, useRef, useEffect } from 'react';
-import { ArrowLeft, X, Bot, User } from 'lucide-react';
+import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import { ArrowLeft, X, Bot, User, ArrowUp, ExternalLink } from 'lucide-react';
 import type { Theme, Session, LogEntry } from '../../types';
 import type { InboxItem } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
@@ -78,6 +78,8 @@ interface FocusModeViewProps {
 	onExitFocus: () => void; // Return to list view
 	onNavigateItem: (index: number) => void; // Jump to item at index
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
+	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
+	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
 }
 
 // Maps STATUS_COLORS key to actual hex from theme
@@ -102,6 +104,8 @@ export default function FocusModeView({
 	onClose,
 	onExitFocus,
 	onNavigateItem,
+	onQuickReply,
+	onOpenAndReply,
 }: FocusModeViewProps) {
 	const navDisabled = items.length <= 1;
 	const statusColor = resolveStatusColor(item.state, theme);
@@ -137,6 +141,37 @@ export default function FocusModeView({
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
 	}, [logs, item.sessionId, item.tabId]);
+
+	// ---- Reply state ----
+	const [replyText, setReplyText] = useState('');
+	const replyInputRef = useRef<HTMLTextAreaElement>(null);
+
+	// Reset reply text when item changes (prev/next navigation)
+	useEffect(() => {
+		setReplyText('');
+	}, [item.sessionId, item.tabId]);
+
+	const handleQuickReply = useCallback(() => {
+		const text = replyText.trim();
+		if (!text) return;
+		if (onQuickReply) {
+			onQuickReply(item.sessionId, item.tabId, text);
+		}
+		setReplyText('');
+		// Auto-advance to next item after reply
+		if (items.length > 1) {
+			const nextIndex = (currentIndex + 1) % items.length;
+			onNavigateItem(nextIndex);
+		}
+	}, [replyText, item, items, currentIndex, onQuickReply, onNavigateItem]);
+
+	const handleOpenAndReply = useCallback(() => {
+		const text = replyText.trim();
+		if (!text) return;
+		if (onOpenAndReply) {
+			onOpenAndReply(item.sessionId, item.tabId, text);
+		}
+	}, [replyText, item, onOpenAndReply]);
 
 	return (
 		<div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
@@ -284,6 +319,76 @@ export default function FocusModeView({
 					)}
 				</div>
 			)}
+
+			{/* Reply input bar */}
+			<div
+				className="flex items-end gap-2 px-4 py-2 border-t"
+				style={{ borderColor: theme.colors.border }}
+			>
+				<textarea
+					ref={replyInputRef}
+					value={replyText}
+					onChange={(e) => setReplyText(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' && !e.shiftKey && !e.metaKey) {
+							e.preventDefault();
+							handleQuickReply();
+						} else if (e.key === 'Enter' && e.shiftKey) {
+							e.preventDefault();
+							handleOpenAndReply();
+						}
+						// CRITICAL: Prevent focus-mode keyboard shortcuts from firing while typing
+						e.stopPropagation();
+					}}
+					placeholder="Reply to agent..."
+					rows={1}
+					aria-label="Reply to agent"
+					className="flex-1 resize-none rounded-lg px-3 py-2 text-sm outline-none"
+					style={{
+						backgroundColor: theme.colors.bgActivity,
+						color: theme.colors.textMain,
+						border: `1px solid ${theme.colors.border}`,
+						minHeight: 36,
+						maxHeight: 80,
+					}}
+					onInput={(e) => {
+						// Auto-resize textarea
+						const target = e.target as HTMLTextAreaElement;
+						target.style.height = 'auto';
+						target.style.height = Math.min(target.scrollHeight, 80) + 'px';
+					}}
+				/>
+				{/* Quick Reply button (primary) */}
+				<button
+					onClick={handleQuickReply}
+					disabled={!replyText.trim()}
+					className="p-2 rounded-lg transition-colors flex-shrink-0"
+					style={{
+						backgroundColor: replyText.trim() ? theme.colors.accent : `${theme.colors.accent}30`,
+						color: replyText.trim() ? theme.colors.accentForeground : theme.colors.textDim,
+						cursor: replyText.trim() ? 'pointer' : 'default',
+					}}
+					title="Quick reply (Enter)"
+				>
+					<ArrowUp className="w-4 h-4" />
+				</button>
+				{/* Open & Reply button (secondary) */}
+				<button
+					onClick={handleOpenAndReply}
+					disabled={!replyText.trim()}
+					className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-xs"
+					style={{
+						border: `1px solid ${theme.colors.border}`,
+						color: replyText.trim() ? theme.colors.textMain : theme.colors.textDim,
+						backgroundColor: 'transparent',
+						cursor: replyText.trim() ? 'pointer' : 'default',
+						opacity: replyText.trim() ? 1 : 0.5,
+					}}
+					title="Open session & reply (Shift+Enter)"
+				>
+					<ExternalLink className="w-3.5 h-3.5" />
+				</button>
+			</div>
 
 			{/* Footer — 44px */}
 			<div

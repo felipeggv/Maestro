@@ -17,6 +17,8 @@ interface AgentInboxProps {
 	groups: Group[];
 	onClose: () => void;
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
+	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
+	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
 }
 
 export default function AgentInbox({
@@ -25,6 +27,8 @@ export default function AgentInbox({
 	groups,
 	onClose,
 	onNavigateToSession,
+	onQuickReply,
+	onOpenAndReply,
 }: AgentInboxProps) {
 	// ---- Focus restoration ----
 	// Capture trigger element synchronously during initial render (before child effects)
@@ -199,6 +203,8 @@ export default function AgentInbox({
 						onExitFocus={handleExitFocus}
 						onNavigateItem={setFocusIndex}
 						onNavigateToSession={onNavigateToSession}
+						onQuickReply={onQuickReply}
+						onOpenAndReply={onOpenAndReply}
 					/>
 				) : (
 					<div style={{ color: theme.colors.textDim, padding: 40, textAlign: 'center' }}>

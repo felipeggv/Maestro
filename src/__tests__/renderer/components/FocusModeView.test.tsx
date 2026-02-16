@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import FocusModeView from '../../../renderer/components/AgentInbox/FocusModeView';
 import type { Theme, Session } from '../../../renderer/types';
 import type { InboxItem } from '../../../renderer/types/agent-inbox';
@@ -22,6 +23,12 @@ vi.mock('lucide-react', () => ({
 	),
 	User: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
 		<span data-testid="user-icon" className={className} style={style}>👤</span>
+	),
+	ArrowUp: ({ className }: { className?: string }) => (
+		<span data-testid="arrow-up-icon" className={className}>↑</span>
+	),
+	ExternalLink: ({ className }: { className?: string }) => (
+		<span data-testid="external-link-icon" className={className}>↗</span>
 	),
 }));
 
@@ -74,12 +81,20 @@ function createSession(sessionId: string, tabId: string, logs: any[] = []): Sess
 	} as unknown as Session;
 }
 
-function renderFocusView(overrides: { items?: InboxItem[]; currentIndex?: number; sessions?: Session[] } = {}) {
+function renderFocusView(overrides: {
+	items?: InboxItem[];
+	currentIndex?: number;
+	sessions?: Session[];
+	onQuickReply?: ReturnType<typeof vi.fn>;
+	onOpenAndReply?: ReturnType<typeof vi.fn>;
+	onNavigateItem?: ReturnType<typeof vi.fn>;
+} = {}) {
 	const item = createItem();
 	const items = overrides.items ?? [item];
 	const currentIndex = overrides.currentIndex ?? 0;
 	const currentItem = items[currentIndex];
 	const sessions = overrides.sessions ?? [createSession(currentItem.sessionId, currentItem.tabId)];
+	const onNavigateItem = overrides.onNavigateItem ?? vi.fn();
 
 	return render(
 		<FocusModeView
@@ -90,7 +105,9 @@ function renderFocusView(overrides: { items?: InboxItem[]; currentIndex?: number
 			currentIndex={currentIndex}
 			onClose={vi.fn()}
 			onExitFocus={vi.fn()}
-			onNavigateItem={vi.fn()}
+			onNavigateItem={onNavigateItem}
+			onQuickReply={overrides.onQuickReply}
+			onOpenAndReply={overrides.onOpenAndReply}
 		/>
 	);
 }
@@ -166,5 +183,65 @@ describe('FocusModeView (smoke)', () => {
 		const prevButton = screen.getByText('← Prev').closest('button');
 		expect(prevButton?.disabled).toBe(false);
 		expect(prevButton?.getAttribute('aria-disabled')).toBeNull();
+	});
+});
+
+describe('FocusModeView (reply)', () => {
+	it('renders reply textarea with placeholder', () => {
+		renderFocusView();
+		const textarea = screen.getByPlaceholderText('Reply to agent...');
+		expect(textarea).toBeDefined();
+		expect(textarea.getAttribute('aria-label')).toBe('Reply to agent');
+	});
+
+	it('send button is disabled when input is empty', () => {
+		renderFocusView();
+		const sendButton = screen.getByTitle('Quick reply (Enter)');
+		expect(sendButton.closest('button')?.disabled).toBe(true);
+	});
+
+	it('calls onQuickReply on Enter', async () => {
+		const onQuickReply = vi.fn();
+		renderFocusView({ onQuickReply });
+
+		const textarea = screen.getByPlaceholderText('Reply to agent...');
+		fireEvent.change(textarea, { target: { value: 'hello' } });
+		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: false });
+
+		expect(onQuickReply).toHaveBeenCalledWith('session-1', 'tab-1', 'hello');
+	});
+
+	it('calls onOpenAndReply on Shift+Enter', async () => {
+		const onOpenAndReply = vi.fn();
+		renderFocusView({ onOpenAndReply });
+
+		const textarea = screen.getByPlaceholderText('Reply to agent...');
+		fireEvent.change(textarea, { target: { value: 'hello' } });
+		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true });
+
+		expect(onOpenAndReply).toHaveBeenCalledWith('session-1', 'tab-1', 'hello');
+	});
+
+	it('clears input and auto-advances after quick reply', async () => {
+		const onQuickReply = vi.fn();
+		const onNavigateItem = vi.fn();
+		renderFocusView({
+			items: [
+				createItem({ sessionId: 's1', tabId: 't1' }),
+				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent 2' }),
+			],
+			currentIndex: 0,
+			onQuickReply,
+			onNavigateItem,
+		});
+
+		const textarea = screen.getByPlaceholderText('Reply to agent...') as HTMLTextAreaElement;
+		fireEvent.change(textarea, { target: { value: 'hello' } });
+		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: false });
+
+		// Input should be cleared
+		expect(textarea.value).toBe('');
+		// Should auto-advance to next item (index 1)
+		expect(onNavigateItem).toHaveBeenCalledWith(1);
 	});
 });

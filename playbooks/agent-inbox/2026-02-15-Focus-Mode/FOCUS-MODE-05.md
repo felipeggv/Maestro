@@ -1,68 +1,98 @@
-# Phase 05: Reply Input + Send Mechanism
+# Phase 05: Reply Input + Dual Send Mechanism
 
 > **Feature:** Focus Mode (Inbox Triage View)
 > **Codebase:** `~/Documents/Vibework/Maestro` | **Branch:** `feature/focus-mode`
 > **Depends on:** Phase 04 (conversation tail rendering)
 
-This phase adds the reply input at the bottom of FocusModeView. The user can type a message and send it to the agent. Sending navigates to the session (activates it), writes the text to the agent's stdin, and auto-advances to the next inbox item.
+This phase adds the reply input at the bottom of FocusModeView with TWO send modes:
+
+1. **Quick Reply** (Enter) — sends directly to the agent's PTY, stays in focus mode, auto-advances to next item
+2. **Open & Reply** (Shift+Enter or button) — navigates to session with pre-filled input, closes modal
+
+Quick Reply is the primary mechanism — it keeps the user in the triage loop. Open & Reply is for when the user needs full terminal context.
 
 ---
 
-## Understand the Send Path
+## Understand the Send Paths
 
-The existing send mechanism works like this:
-1. `App.tsx` has a `processInput()` function (from `useInputProcessing` hook)
-2. It reads the active session's `inputValue` from the active AITab
-3. It calls `processService.write(sessionId, data)` which writes to the agent's PTY stdin via `window.maestro.process.write(sessionId, data)`
-4. The input is cleared and a log entry is added
+**Quick Reply** (stays in modal):
 
-For Focus Mode, we can't reuse `processInput` directly because it operates on the *active* session. Instead, the send flow is:
-1. User types in the reply input
-2. User presses Enter (or clicks Send)
-3. We call `onNavigateToSession(sessionId, tabId)` to activate the target session/tab
-4. We set the input value on that tab
-5. The existing input processing handles the actual send
+1. User types text, presses Enter
+2. Calls `processService.write(sessionId, text + '\n')` directly via IPC
+3. Adds a user log entry to the tab's logs (for immediate UI feedback)
+4. Clears reply input
+5. Auto-advances to next item
 
-**Simpler approach:** Since `onNavigateToSession` already closes the modal, we can:
-1. Navigate to the session (activates it, closes modal)
-2. Set the tab's inputValue to the typed text
-3. Let the user send manually (or auto-send via a flag)
+**Open & Reply** (exits modal):
 
-**Even simpler:** Add a new callback prop `onReplyToSession` that:
-1. Navigates to the session
-2. Pre-fills the input with the typed text
-3. Optionally auto-sends
-
-We'll go with the pre-fill approach — it's safer (user confirms before sending) and requires minimal changes to App.tsx.
+1. User types text, presses Shift+Enter or clicks "Open" button
+2. Navigates to session, sets `inputValue` on the target tab
+3. Closes modal — user sees pre-filled input in the terminal
+4. User presses Enter in the terminal to confirm send
 
 ---
 
 ## Add Reply Input to FocusModeView
 
-- [ ] **Add a reply input bar above the footer in `src/renderer/components/AgentInbox/FocusModeView.tsx`.** Changes:
+- [x] **Add a reply input bar above the footer in `src/renderer/components/AgentInbox/FocusModeView.tsx`.** Changes:
+  1. **Add two new props** to FocusModeViewProps:
 
-  1. **Add a new prop** to FocusModeViewProps:
      ```ts
-     onReplyToSession?: (sessionId: string, tabId: string, text: string) => void;
+     onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
+     onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
      ```
 
   2. **Add reply state:**
+
      ```ts
      const [replyText, setReplyText] = useState('');
      const replyInputRef = useRef<HTMLTextAreaElement>(null);
      ```
 
   3. **Reset reply text when item changes** (prev/next navigation):
+
      ```ts
      useEffect(() => {
      	setReplyText('');
      }, [item.sessionId, item.tabId]);
      ```
 
-  4. **Add the reply input bar** between the conversation body and the footer. Layout: flex row, `px-4 py-2`, border-top.
+  4. **Add the `handleQuickReply` callback:**
+
+     ```ts
+     const handleQuickReply = useCallback(() => {
+     	const text = replyText.trim();
+     	if (!text) return;
+     	if (onQuickReply) {
+     		onQuickReply(item.sessionId, item.tabId, text);
+     	}
+     	setReplyText('');
+     	// Auto-advance to next item after reply
+     	if (items.length > 1) {
+     		const nextIndex = (currentIndex + 1) % items.length;
+     		onNavigateItem(nextIndex);
+     	}
+     }, [replyText, item, items, currentIndex, onQuickReply, onNavigateItem]);
+     ```
+
+  5. **Add the `handleOpenAndReply` callback:**
+
+     ```ts
+     const handleOpenAndReply = useCallback(() => {
+     	const text = replyText.trim();
+     	if (!text) return;
+     	if (onOpenAndReply) {
+     		onOpenAndReply(item.sessionId, item.tabId, text);
+     	}
+     }, [replyText, item, onOpenAndReply]);
+     ```
+
+  6. **Add the reply input bar** between the conversation body and the footer:
 
      ```tsx
-     {/* Reply input bar */}
+     {
+     	/* Reply input bar */
+     }
      <div
      	className="flex items-end gap-2 px-4 py-2 border-t"
      	style={{ borderColor: theme.colors.border }}
@@ -72,29 +102,26 @@ We'll go with the pre-fill approach — it's safer (user confirms before sending
      		value={replyText}
      		onChange={(e) => setReplyText(e.target.value)}
      		onKeyDown={(e) => {
-     			if (e.key === 'Enter' && !e.shiftKey) {
+     			if (e.key === 'Enter' && !e.shiftKey && !e.metaKey) {
      				e.preventDefault();
-     				handleReply();
+     				handleQuickReply();
+     			} else if (e.key === 'Enter' && e.shiftKey) {
+     				e.preventDefault();
+     				handleOpenAndReply();
      			}
-     			// Prevent focus-mode keyboard shortcuts from firing while typing
+     			// CRITICAL: Prevent focus-mode keyboard shortcuts from firing while typing
      			e.stopPropagation();
      		}}
      		placeholder="Reply to agent..."
      		rows={1}
+     		aria-label="Reply to agent"
      		className="flex-1 resize-none rounded-lg px-3 py-2 text-sm outline-none"
      		style={{
-     			backgroundColor: theme.colors.bgActive,
+     			backgroundColor: theme.colors.bgActivity,
      			color: theme.colors.textMain,
      			border: `1px solid ${theme.colors.border}`,
      			minHeight: 36,
      			maxHeight: 80,
-     		}}
-     		onFocus={() => {
-     			// Auto-resize on focus
-     			if (replyInputRef.current) {
-     				replyInputRef.current.style.height = 'auto';
-     				replyInputRef.current.style.height = replyInputRef.current.scrollHeight + 'px';
-     			}
      		}}
      		onInput={(e) => {
      			// Auto-resize textarea
@@ -103,121 +130,192 @@ We'll go with the pre-fill approach — it's safer (user confirms before sending
      			target.style.height = Math.min(target.scrollHeight, 80) + 'px';
      		}}
      	/>
+     	{/* Quick Reply button (primary) */}
      	<button
-     		onClick={handleReply}
+     		onClick={handleQuickReply}
      		disabled={!replyText.trim()}
      		className="p-2 rounded-lg transition-colors flex-shrink-0"
      		style={{
-     			backgroundColor: replyText.trim()
-     				? theme.colors.accent
-     				: `${theme.colors.accent}30`,
-     			color: replyText.trim()
-     				? theme.colors.accentForeground
-     				: theme.colors.textDim,
+     			backgroundColor: replyText.trim() ? theme.colors.accent : `${theme.colors.accent}30`,
+     			color: replyText.trim() ? theme.colors.accentForeground : theme.colors.textDim,
      			cursor: replyText.trim() ? 'pointer' : 'default',
      		}}
-     		title="Send reply (Enter)"
+     		title="Quick reply (Enter)"
      	>
      		<ArrowUp className="w-4 h-4" />
      	</button>
-     </div>
+     	{/* Open & Reply button (secondary) */}
+     	<button
+     		onClick={handleOpenAndReply}
+     		disabled={!replyText.trim()}
+     		className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-xs"
+     		style={{
+     			border: `1px solid ${theme.colors.border}`,
+     			color: replyText.trim() ? theme.colors.textMain : theme.colors.textDim,
+     			backgroundColor: 'transparent',
+     			cursor: replyText.trim() ? 'pointer' : 'default',
+     			opacity: replyText.trim() ? 1 : 0.5,
+     		}}
+     		title="Open session & reply (Shift+Enter)"
+     	>
+     		<ExternalLink className="w-3.5 h-3.5" />
+     	</button>
+     </div>;
      ```
 
-  5. **Import ArrowUp** from lucide-react (same icon used by InputArea's send button).
+  7. **Import** `ArrowUp, ExternalLink` from lucide-react.
 
-  6. **Add the `handleReply` callback:**
-     ```ts
-     const handleReply = useCallback(() => {
-     	const text = replyText.trim();
-     	if (!text) return;
-     	if (onReplyToSession) {
-     		onReplyToSession(item.sessionId, item.tabId, text);
-     	}
-     	setReplyText('');
-     	// Auto-advance to next item after reply
-     	if (items.length > 1) {
-     		const nextIndex = (currentIndex + 1) % items.length;
-     		onNavigateItem(nextIndex);
-     	}
-     }, [replyText, item, items, currentIndex, onReplyToSession, onNavigateItem]);
-     ```
-
-  7. **Important:** The `e.stopPropagation()` in the textarea's `onKeyDown` is critical — without it, pressing `ArrowLeft`/`ArrowRight` while typing would navigate between items, and `Escape` would exit focus mode instead of just blurring the input. The shell's keyboard handler should only fire when the textarea is NOT focused.
+  8. **NOTE:** The textarea background uses `theme.colors.bgActivity` (NOT `bgActive`).
 
   Run `npx tsc --noEmit` to verify.
 
 ---
 
-## Wire onReplyToSession in the AgentInbox Shell
+## Wire Send Handlers in the AgentInbox Shell
 
-- [ ] **Add `onReplyToSession` handler in `src/renderer/components/AgentInbox/index.tsx` and pass it to FocusModeView.** Changes:
+- [x] **Add `onQuickReply` and `onOpenAndReply` props and handlers in `src/renderer/components/AgentInbox/index.tsx`.** Changes:
+  1. **Add to AgentInboxProps:**
 
-  1. **Add prop to AgentInboxProps:**
      ```ts
-     onReplyToSession?: (sessionId: string, tabId: string, text: string) => void;
+     onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
+     onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
      ```
 
   2. **Pass through to FocusModeView:**
      ```tsx
      <FocusModeView
      	...
-     	onReplyToSession={onReplyToSession}
+     	onQuickReply={onQuickReply}
+     	onOpenAndReply={onOpenAndReply}
      />
      ```
 
-  3. **Update AppModals.tsx** to pass `onReplyToSession` prop through from App.tsx.
+  Run `npx tsc --noEmit` to verify.
 
-  4. **In App.tsx, create the handler.** Search for where `onNavigateToSession` is defined for AgentInbox and add a sibling handler:
+---
+
+## Wire Handlers in AppModals + App.tsx
+
+- [x] **Wire the two handlers from App.tsx through AppModals.tsx to AgentInbox.** Changes:
+  1. **In `src/renderer/components/AppModals.tsx`:** Add `onQuickReply` and `onOpenAndReply` to the props interfaces (`AppInfoModalsProps` and `AppModalsProps`). Pass them through to `<AgentInbox>`.
+
+  2. **In `src/renderer/App.tsx`:** Create both handlers near where `onNavigateToSession` is defined for AgentInbox.
+
+     **Quick Reply handler** (sends directly, stays in modal):
 
      ```ts
-     const handleReplyToSession = useCallback((sessionId: string, tabId: string, text: string) => {
-     	// 1. Navigate to the session (same as onNavigateToSession)
-     	// Find the session, activate it, switch to the correct tab
-     	// 2. Set the tab's inputValue to the reply text
-     	// 3. The user will see the text pre-filled in the input area
+     const handleQuickReply = useCallback(
+     	(sessionId: string, tabId: string, text: string) => {
+     		// Write directly to the agent's PTY stdin
+     		window.maestro.process.write(sessionId, text + '\n').catch((err) => {
+     			console.error('Quick reply failed:', err);
+     		});
 
-     	// Find session and set the active tab's input
-     	const targetSession = sessions.find(s => s.id === sessionId);
-     	if (!targetSession) return;
-
-     	// Activate the session
-     	setActiveSessionId(sessionId);
-
-     	// Switch to the correct tab
-     	updateSession(sessionId, (s) => ({
-     		...s,
-     		activeTabId: tabId,
-     		aiTabs: s.aiTabs.map(t =>
-     			t.id === tabId ? { ...t, inputValue: text } : t
-     		),
-     	}));
-
-     	// Close the modal
-     	setAgentInboxOpen(false);
-     }, [sessions, setActiveSessionId, updateSession, setAgentInboxOpen]);
+     		// Add a user log entry for immediate UI feedback
+     		setSessions((prev) =>
+     			prev.map((s) => {
+     				if (s.id !== sessionId) return s;
+     				return {
+     					...s,
+     					aiTabs: s.aiTabs.map((t) => {
+     						if (t.id !== tabId) return t;
+     						return {
+     							...t,
+     							hasUnread: false,
+     							logs: [
+     								...t.logs,
+     								{
+     									id: `user-${Date.now()}`,
+     									timestamp: Date.now(),
+     									source: 'user' as const,
+     									text: text,
+     								},
+     							],
+     						};
+     					}),
+     				};
+     			})
+     		);
+     	},
+     	[setSessions]
+     );
      ```
 
-     **Note:** Look at how the existing `onNavigateToSession` handler works in App.tsx and follow the same pattern. The key addition is setting `inputValue` on the target tab.
+     **IMPORTANT:** Verify that `window.maestro.process.write` is the correct IPC call for sending text to an agent's stdin. Check `src/renderer/services/process.ts` — the `processService.write(sessionId, data)` method wraps this. You can use either the service or the direct IPC call. The direct call is simpler here since we don't need error handling beyond a console.error.
 
-  5. **Pass it through AppModals:**
-     ```tsx
-     // In AppModals.tsx props
-     onReplyToSession?: (sessionId: string, tabId: string, text: string) => void;
+     **Open & Reply handler** (navigates to session, pre-fills input):
 
-     // In the AgentInbox render
-     <AgentInbox
-     	...
-     	onReplyToSession={onReplyToSession}
-     />
+     ```ts
+     const handleOpenAndReply = useCallback(
+     	(sessionId: string, tabId: string, text: string) => {
+     		// Activate the session
+     		setActiveSessionId(sessionId);
+
+     		// Switch to the correct tab and pre-fill input
+     		updateSession(sessionId, (s) => ({
+     			...s,
+     			activeTabId: tabId,
+     			aiTabs: s.aiTabs.map((t) =>
+     				t.id === tabId ? { ...t, inputValue: text, hasUnread: false } : t
+     			),
+     		}));
+
+     		// Close the modal
+     		setAgentInboxOpen(false);
+     	},
+     	[setActiveSessionId, updateSession, setAgentInboxOpen]
+     );
      ```
+
+     **NOTE:** Before implementing `handleOpenAndReply`, verify that `InputArea.tsx` reads `inputValue` from the session state on tab switch. If `InputArea` uses local state that doesn't sync from props, the pre-fill won't work. Search for `inputValue` in `InputArea.tsx` and trace how it initializes.
+
+  3. Pass both handlers through AppModals to AgentInbox.
 
   Run `npx tsc --noEmit` to verify the full chain compiles.
 
 ---
 
+## Smoke Test for Reply
+
+- [x] **Add reply smoke tests to `src/__tests__/renderer/components/FocusModeView.test.tsx`.** Append to the existing smoke test file created in Phase 02:
+
+  ```ts
+  describe('FocusModeView (reply)', () => {
+  	it('renders reply textarea with placeholder', () => {
+  		// Assert: textarea with placeholder "Reply to agent..." exists
+  	});
+
+  	it('send button is disabled when input is empty', () => {
+  		// Assert: ArrowUp button is disabled
+  	});
+
+  	it('calls onQuickReply on Enter', () => {
+  		// Type "hello" in textarea
+  		// Press Enter (without shift)
+  		// Assert: onQuickReply called with (sessionId, tabId, "hello")
+  	});
+
+  	it('calls onOpenAndReply on Shift+Enter', () => {
+  		// Type "hello" in textarea
+  		// Press Shift+Enter
+  		// Assert: onOpenAndReply called with (sessionId, tabId, "hello")
+  	});
+
+  	it('clears input and auto-advances after quick reply', () => {
+  		// Type "hello", press Enter
+  		// Assert: textarea value is empty
+  		// Assert: onNavigateItem called with next index
+  	});
+  });
+  ```
+
+  Run: `npx vitest run src/__tests__/renderer/components/FocusModeView.test.tsx`
+
+---
+
 ## Verification Gate
 
-- [ ] **Run full verification.** Execute:
+- [x] **Run full verification.** Execute:
   ```bash
   cd ~/Documents/Vibework/Maestro && npx tsc --noEmit && npx vitest run && npx eslint src/renderer/components/AgentInbox/ --ext .ts,.tsx
   ```
@@ -227,11 +325,12 @@ We'll go with the pre-fill approach — it's safer (user confirms before sending
 
 ## Commit
 
-- [ ] **Commit this phase.**
+- [x] **Commit this phase.**
   ```bash
   git add src/renderer/components/AgentInbox/FocusModeView.tsx \
           src/renderer/components/AgentInbox/index.tsx \
           src/renderer/components/AppModals.tsx \
-          src/renderer/App.tsx
-  git commit -m "FOCUS-MODE: Phase 05 — reply input with pre-fill and auto-advance"
+          src/renderer/App.tsx \
+          src/__tests__/renderer/components/FocusModeView.test.tsx
+  git commit -m "FOCUS-MODE: Phase 05 — dual reply (Quick Reply + Open & Reply) with smoke tests"
   ```

@@ -913,6 +913,70 @@ function MaestroConsoleInner() {
 	const handleCloseUpdateCheckModal = useCallback(() => setUpdateCheckModalOpen(false), []);
 	const handleCloseProcessMonitor = useCallback(() => setProcessMonitorOpen(false), []);
 	const handleCloseAgentInbox = useCallback(() => setAgentInboxOpen(false), []);
+
+	// Agent Inbox: Quick Reply — sends directly to PTY, stays in modal
+	const handleQuickReply = useCallback(
+		(sessionId: string, tabId: string, text: string) => {
+			// Write directly to the agent's PTY stdin
+			window.maestro.process.write(sessionId, text + '\n').catch((err) => {
+				console.error('Quick reply failed:', err);
+			});
+
+			// Add a user log entry for immediate UI feedback
+			setSessions((prev) =>
+				prev.map((s) => {
+					if (s.id !== sessionId) return s;
+					return {
+						...s,
+						aiTabs: s.aiTabs.map((t) => {
+							if (t.id !== tabId) return t;
+							return {
+								...t,
+								hasUnread: false,
+								logs: [
+									...t.logs,
+									{
+										id: `user-${Date.now()}`,
+										timestamp: Date.now(),
+										source: 'user' as const,
+										text: text,
+									},
+								],
+							};
+						}),
+					};
+				})
+			);
+		},
+		[setSessions]
+	);
+
+	// Agent Inbox: Open & Reply — navigates to session with pre-filled input
+	const handleOpenAndReply = useCallback(
+		(sessionId: string, tabId: string, text: string) => {
+			// Activate the session
+			setActiveSessionId(sessionId);
+
+			// Switch to the correct tab and pre-fill input
+			setSessions((prev) =>
+				prev.map((s) => {
+					if (s.id !== sessionId) return s;
+					return {
+						...s,
+						activeTabId: tabId,
+						aiTabs: s.aiTabs.map((t) =>
+							t.id === tabId ? { ...t, inputValue: text, hasUnread: false } : t
+						),
+					};
+				})
+			);
+
+			// Close the modal
+			setAgentInboxOpen(false);
+		},
+		[setActiveSessionId, setSessions, setAgentInboxOpen]
+	);
+
 	const handleCloseLogViewer = useCallback(() => setLogViewerOpen(false), []);
 
 	// Confirm modal close handler
@@ -11775,6 +11839,8 @@ You are taking over this conversation. Based on the context above, provide a bri
 					onNavigateToGroupChat={handleProcessMonitorNavigateToGroupChat}
 					agentInboxOpen={agentInboxOpen}
 					onCloseAgentInbox={handleCloseAgentInbox}
+					onQuickReply={handleQuickReply}
+					onOpenAndReply={handleOpenAndReply}
 					usageDashboardOpen={usageDashboardOpen}
 					onCloseUsageDashboard={() => setUsageDashboardOpen(false)}
 					defaultStatsTimeRange={defaultStatsTimeRange}

@@ -155,6 +155,8 @@ export interface AppInfoModalsProps {
 	// Agent Inbox
 	agentInboxOpen: boolean;
 	onCloseAgentInbox: () => void;
+	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
+	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
 
 	// Usage Dashboard Modal
 	usageDashboardOpen: boolean;
@@ -210,6 +212,8 @@ export function AppInfoModals({
 	// Agent Inbox
 	agentInboxOpen,
 	onCloseAgentInbox,
+	onQuickReply,
+	onOpenAndReply,
 	// Usage Dashboard Modal
 	usageDashboardOpen,
 	onCloseUsageDashboard,
@@ -271,6 +275,8 @@ export function AppInfoModals({
 						groups={groups}
 						onClose={onCloseAgentInbox}
 						onNavigateToSession={onNavigateToSession}
+						onQuickReply={onQuickReply}
+						onOpenAndReply={onOpenAndReply}
 					/>
 				</Suspense>
 			)}
@@ -1795,6 +1801,8 @@ export interface AppModalsProps {
 	onNavigateToGroupChat: (groupChatId: string) => void;
 	agentInboxOpen: boolean;
 	onCloseAgentInbox: () => void;
+	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
+	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
 	usageDashboardOpen: boolean;
 	onCloseUsageDashboard: () => void;
 	/** Default time range for the Usage Dashboard from settings */
@@ -2162,6 +2170,8 @@ export function AppModals(props: AppModalsProps) {
 		onNavigateToGroupChat,
 		agentInboxOpen,
 		onCloseAgentInbox,
+		onQuickReply,
+		onOpenAndReply,
 		usageDashboardOpen,
 		onCloseUsageDashboard,
 		defaultStatsTimeRange,
@@ -2437,6 +2447,8 @@ export function AppModals(props: AppModalsProps) {
 				onNavigateToGroupChat={onNavigateToGroupChat}
 				agentInboxOpen={agentInboxOpen}
 				onCloseAgentInbox={onCloseAgentInbox}
+				onQuickReply={onQuickReply}
+				onOpenAndReply={onOpenAndReply}
 				usageDashboardOpen={usageDashboardOpen}
 				onCloseUsageDashboard={onCloseUsageDashboard}
 				defaultStatsTimeRange={defaultStatsTimeRange}
