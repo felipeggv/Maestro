@@ -278,6 +278,7 @@ function InboxItemCardContent({
 			{hasValidContext && (
 				<div
 					data-testid="context-usage-bar"
+					title={`Context window: ${item.contextUsage}% used`}
 					style={{
 						height: 4,
 						width: '100%',

@@ -74,6 +74,10 @@ export default function AgentInbox({
 	// ---- Compute items at the shell level ----
 	const items = useAgentInbox(sessions, groups, filterMode, sortMode);
 
+	const handleExitFocus = useCallback(() => {
+		setViewMode('list');
+	}, []);
+
 	// ---- Edge case: items shrink while in focus mode ----
 	useEffect(() => {
 		if (viewMode === 'focus' && items.length > 0 && focusIndex >= items.length) {
@@ -82,7 +86,7 @@ export default function AgentInbox({
 		if (viewMode === 'focus' && items.length === 0) {
 			handleExitFocus();
 		}
-	}, [items.length, focusIndex, viewMode]);
+	}, [items.length, focusIndex, viewMode, handleExitFocus]);
 
 	const handleEnterFocus = useCallback(
 		(item: InboxItem) => {
@@ -92,10 +96,6 @@ export default function AgentInbox({
 		},
 		[items]
 	);
-
-	const handleExitFocus = useCallback(() => {
-		setViewMode('list');
-	}, []);
 
 	// ---- Layer stack: viewMode-aware Escape ----
 	const handleLayerEscape = useCallback(() => {

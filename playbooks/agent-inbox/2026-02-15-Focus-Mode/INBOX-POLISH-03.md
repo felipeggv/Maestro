@@ -228,7 +228,7 @@ all: { text: 'All caught up — no sessions need attention.', showIcon: true },
 
 ---
 
-- [ ] Invoke `/AIOS:agents:dev` to add a tooltip to the context bar. In `src/renderer/components/AgentInbox/InboxListView.tsx`, find the context usage bar wrapper (around line 276-283):
+- [x] Invoke `/AIOS:agents:dev` to add a tooltip to the context bar. In `src/renderer/components/AgentInbox/InboxListView.tsx`, find the context usage bar wrapper (around line 276-283):
 
   ```tsx
   <div
@@ -273,7 +273,7 @@ useEffect(() => {
 
 ---
 
-- [ ] Invoke `/AIOS:agents:dev` to fix the missing dependency. In `src/renderer/components/AgentInbox/index.tsx`, find the useEffect at lines 78-85:
+- [x] Invoke `/AIOS:agents:dev` to fix the missing dependency. In `src/renderer/components/AgentInbox/index.tsx`, find the useEffect at lines 78-85:
 
   ```typescript
   useEffect(() => {
@@ -304,4 +304,4 @@ useEffect(() => {
 
 ## Gate
 
-- [ ] Invoke `/AIOS:agents:dev` to run the gate check: `npx tsc --noEmit 2>&1 | head -10 && npx vitest run src/__tests__/renderer/components/AgentInbox.test.tsx 2>&1 | tail -10`. Fix any type errors or test failures before completing.
+- [x] Invoke `/AIOS:agents:dev` to run the gate check: `npx tsc --noEmit 2>&1 | head -10 && npx vitest run src/__tests__/renderer/components/AgentInbox.test.tsx 2>&1 | tail -10`. Fix any type errors or test failures before completing.
