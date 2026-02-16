@@ -40,3 +40,6 @@ export const STATUS_COLORS: Record<SessionState, string> = {
 	connecting: 'textMuted',
 	error: 'error',
 }
+
+/** View mode inside the AgentInbox modal */
+export type InboxViewMode = 'list' | 'focus'
