@@ -23,43 +23,74 @@ vi.mock('lucide-react', () => ({
 		</span>
 	),
 	ChevronDown: ({ style }: { style?: React.CSSProperties }) => (
-		<span data-testid="chevron-down-icon" style={style}>▼</span>
+		<span data-testid="chevron-down-icon" style={style}>
+			▼
+		</span>
 	),
 	ChevronRight: ({ style }: { style?: React.CSSProperties }) => (
-		<span data-testid="chevron-right-icon" style={style}>▶</span>
+		<span data-testid="chevron-right-icon" style={style}>
+			▶
+		</span>
 	),
 	Maximize2: ({ className }: { className?: string }) => (
-		<span data-testid="maximize2-icon" className={className}>⛶</span>
+		<span data-testid="maximize2-icon" className={className}>
+			⛶
+		</span>
 	),
 	Minimize2: ({ className }: { className?: string }) => (
-		<span data-testid="minimize2-icon" className={className}>⊟</span>
+		<span data-testid="minimize2-icon" className={className}>
+			⊟
+		</span>
 	),
 	ArrowLeft: ({ style }: { style?: React.CSSProperties }) => (
-		<span data-testid="arrow-left-icon" style={style}>←</span>
+		<span data-testid="arrow-left-icon" style={style}>
+			←
+		</span>
 	),
 	Bot: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-		<span data-testid="bot-icon" className={className} style={style}>🤖</span>
+		<span data-testid="bot-icon" className={className} style={style}>
+			🤖
+		</span>
 	),
 	User: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-		<span data-testid="user-icon" className={className} style={style}>👤</span>
+		<span data-testid="user-icon" className={className} style={style}>
+			👤
+		</span>
 	),
 	ArrowUp: ({ className }: { className?: string }) => (
-		<span data-testid="arrow-up-icon" className={className}>↑</span>
+		<span data-testid="arrow-up-icon" className={className}>
+			↑
+		</span>
 	),
 	ExternalLink: ({ className }: { className?: string }) => (
-		<span data-testid="external-link-icon" className={className}>↗</span>
+		<span data-testid="external-link-icon" className={className}>
+			↗
+		</span>
 	),
 	ChevronLeft: ({ className }: { className?: string }) => (
-		<span data-testid="chevron-left-icon" className={className}>‹</span>
+		<span data-testid="chevron-left-icon" className={className}>
+			‹
+		</span>
 	),
 	Eye: ({ className }: { className?: string }) => (
-		<span data-testid="eye-icon" className={className}>👁</span>
+		<span data-testid="eye-icon" className={className}>
+			👁
+		</span>
 	),
 	EyeOff: ({ className }: { className?: string }) => (
-		<span data-testid="eye-off-icon" className={className}>🚫</span>
+		<span data-testid="eye-off-icon" className={className}>
+			🚫
+		</span>
+	),
+	Brain: ({ className }: { className?: string }) => (
+		<span data-testid="brain-icon" className={className}>
+			🧠
+		</span>
 	),
 	FileText: ({ className }: { className?: string }) => (
-		<span data-testid="file-text-icon" className={className}>📄</span>
+		<span data-testid="file-text-icon" className={className}>
+			📄
+		</span>
 	),
 }));
 
@@ -101,8 +132,7 @@ vi.mock('react-window', () => ({
 	}) => {
 		const rows = [];
 		for (let i = 0; i < rowCount; i++) {
-			const height =
-				typeof rowHeight === 'function' ? rowHeight(i, rowProps) : rowHeight;
+			const height = typeof rowHeight === 'function' ? rowHeight(i, rowProps) : rowHeight;
 			rows.push(
 				<RowComponent
 					key={i}
@@ -227,11 +257,7 @@ function createTab(overrides: Partial<Session['aiTabs'][0]> & { id: string }) {
 }
 
 // Helper: create a session with an inbox-eligible tab
-function createInboxSession(
-	sessionId: string,
-	tabId: string,
-	extras?: Partial<Session>
-): Session {
+function createInboxSession(sessionId: string, tabId: string, extras?: Partial<Session>): Session {
 	return createSession({
 		id: sessionId,
 		name: `Session ${sessionId}`,
@@ -240,7 +266,9 @@ function createInboxSession(
 			createTab({
 				id: tabId,
 				hasUnread: true,
-				logs: [{ text: `Last message from ${sessionId}`, timestamp: Date.now(), type: 'assistant' }],
+				logs: [
+					{ text: `Last message from ${sessionId}`, timestamp: Date.now(), type: 'assistant' },
+				],
 			}),
 		] as any,
 		...extras,
@@ -272,14 +300,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('rendering', () => {
 		it('renders modal with dialog role and aria-label', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			expect(dialog).toBeTruthy();
 			expect(dialog.getAttribute('aria-label')).toBe('Unified Inbox');
@@ -287,64 +308,29 @@ describe('AgentInbox', () => {
 		});
 
 		it('renders header with title "Unified Inbox"', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Unified Inbox')).toBeTruthy();
 		});
 
 		it('shows item count badge with "need action" text', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('1 need action')).toBeTruthy();
 		});
 
 		it('shows "0 need action" when no items', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('0 need action')).toBeTruthy();
 		});
 
 		it('shows empty state message when no items match filter', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Default filter is 'unread' → shows "No unread sessions." message
 			expect(screen.getByText('No unread sessions.')).toBeTruthy();
 		});
 
 		it('renders footer with item count and keyboard hints', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('0 items')).toBeTruthy();
 			expect(screen.getByText(/↑↓ navigate/)).toBeTruthy();
 			expect(screen.getByText(/Enter open/)).toBeTruthy();
@@ -354,14 +340,7 @@ describe('AgentInbox', () => {
 
 		it('renders session name and last message for inbox items', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Session s1')).toBeTruthy();
 			// Smart summary: waiting_input with no recognized AI source → "Waiting: awaiting your response"
 			expect(screen.getByText('Waiting: awaiting your response')).toBeTruthy();
@@ -369,17 +348,8 @@ describe('AgentInbox', () => {
 
 		it('renders group name with pipe separator when session has group', () => {
 			const groups = [createGroup({ id: 'g1', name: 'My Group' })];
-			const sessions = [
-				createInboxSession('s1', 't1', { groupId: 'g1' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { groupId: 'g1' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
 			expect(screen.getByText('My Group')).toBeTruthy();
 			// Group separator is now a pipe "|" instead of "/"
 			expect(screen.getAllByText('|').length).toBeGreaterThanOrEqual(1);
@@ -387,14 +357,7 @@ describe('AgentInbox', () => {
 
 		it('renders status badge with correct label', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// "Needs Input" appears only in the status badge (filter buttons are now Unread/Read)
 			const matches = screen.getAllByText('Needs Input');
 			expect(matches.length).toBeGreaterThanOrEqual(1);
@@ -404,17 +367,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('renders git branch badge when available with icon prefix', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { worktreeBranch: 'feature/test' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { worktreeBranch: 'feature/test' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badge = screen.getByTestId('git-branch-badge');
 			expect(badge).toBeTruthy();
 			expect(badge.textContent).toContain('⎇');
@@ -422,17 +376,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('renders context usage when available with colored text', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 45 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 45 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Context: 45%')).toBeTruthy();
 			// Should render context usage bar
 			expect(screen.getByTestId('context-usage-bar')).toBeTruthy();
@@ -440,14 +385,7 @@ describe('AgentInbox', () => {
 
 		it('renders relative timestamp', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('5m ago')).toBeTruthy();
 		});
 	});
@@ -457,14 +395,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('layer stack', () => {
 		it('registers modal layer on mount', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(mockRegisterLayer).toHaveBeenCalledTimes(1);
 			const call = mockRegisterLayer.mock.calls[0][0];
 			expect(call.type).toBe('modal');
@@ -473,12 +404,7 @@ describe('AgentInbox', () => {
 
 		it('unregisters modal layer on unmount', () => {
 			const { unmount } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			unmount();
 			expect(mockUnregisterLayer).toHaveBeenCalledWith('layer-inbox-123');
@@ -518,14 +444,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('close behavior', () => {
 		it('calls onClose when close button is clicked', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const closeBtn = screen.getByTitle('Close (Esc)');
 			fireEvent.click(closeBtn);
 			expect(onClose).toHaveBeenCalledTimes(1);
@@ -533,12 +452,7 @@ describe('AgentInbox', () => {
 
 		it('calls onClose when overlay is clicked', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const overlay = container.querySelector('.modal-overlay');
 			if (overlay) fireEvent.click(overlay);
@@ -546,28 +460,14 @@ describe('AgentInbox', () => {
 		});
 
 		it('does NOT call onClose when clicking inside modal content', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			fireEvent.click(dialog);
 			expect(onClose).not.toHaveBeenCalled();
 		});
 
 		it('Escape triggers onClose via layer stack onEscape handler', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// The modal registers with the layer stack, passing handleClose as onEscape.
 			// Invoking the registered onEscape callback should trigger onClose.
 			expect(mockRegisterLayer).toHaveBeenCalledTimes(1);
@@ -594,12 +494,7 @@ describe('AgentInbox', () => {
 			});
 
 			const { unmount } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 
 			// Trigger close via close button
@@ -622,10 +517,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('keyboard navigation', () => {
 		it('ArrowDown increments selected index', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(
 				<AgentInbox
 					theme={theme}
@@ -645,10 +537,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('ArrowUp decrements selected index', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(
 				<AgentInbox
 					theme={theme}
@@ -668,18 +557,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('ArrowDown wraps from last to first item', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Go down twice (past last item, should wrap to first)
 			fireEvent.keyDown(dialog, { key: 'ArrowDown' });
@@ -690,18 +569,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('ArrowUp wraps from first to last item', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			fireEvent.keyDown(dialog, { key: 'ArrowUp' });
 
@@ -728,14 +597,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('does nothing on keyboard events when no items', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Should not throw
 			fireEvent.keyDown(dialog, { key: 'ArrowDown' });
@@ -745,14 +607,7 @@ describe('AgentInbox', () => {
 
 		it('Tab moves focus from list to first header control', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Focus the dialog (list area)
 			dialog.focus();
@@ -766,14 +621,7 @@ describe('AgentInbox', () => {
 
 		it('Tab cycles through header controls and wraps back to list', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			dialog.focus();
 
@@ -796,14 +644,7 @@ describe('AgentInbox', () => {
 
 		it('Shift+Tab wraps from list to list (when at first header or list)', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			dialog.focus();
 
@@ -814,14 +655,7 @@ describe('AgentInbox', () => {
 
 		it('Shift+Tab from second header control goes to first', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			dialog.focus();
 
@@ -863,14 +697,7 @@ describe('AgentInbox', () => {
 
 		it('does not throw when onNavigateToSession is undefined', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const option = screen.getByRole('option');
 			// Should not throw
 			fireEvent.click(option);
@@ -883,14 +710,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('filter controls', () => {
 		it('renders filter buttons: All, Unread, Read', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('All')).toBeTruthy();
 			expect(screen.getByText('Unread')).toBeTruthy();
 			expect(screen.getByText('Read')).toBeTruthy();
@@ -898,17 +718,8 @@ describe('AgentInbox', () => {
 
 		it('changes filter when clicking filter button', () => {
 			// Session in 'idle' state with unread — visible under 'all' and 'unread', but not 'read'
-			const sessions = [
-				createInboxSession('s1', 't1', { state: 'idle' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { state: 'idle' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Should be visible under 'all'
 			expect(screen.getByText('Session s1')).toBeTruthy();
 
@@ -928,14 +739,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('sort controls', () => {
 		it('renders sort buttons: Newest, Oldest, Grouped', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Newest')).toBeTruthy();
 			expect(screen.getByText('Oldest')).toBeTruthy();
 			expect(screen.getByText('Grouped')).toBeTruthy();
@@ -947,14 +751,7 @@ describe('AgentInbox', () => {
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
 				createInboxSession('s2', 't2'), // no group
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
 			// Switch to Grouped
 			fireEvent.click(screen.getByText('Grouped'));
 			// Group headers render with text-transform: uppercase via CSS.
@@ -972,14 +769,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('ARIA attributes', () => {
 		it('has listbox role on body container', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const listbox = screen.getByRole('listbox');
 			expect(listbox).toBeTruthy();
 			expect(listbox.getAttribute('aria-label')).toBe('Inbox items');
@@ -987,53 +777,27 @@ describe('AgentInbox', () => {
 
 		it('sets aria-activedescendant on listbox', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const listbox = screen.getByRole('listbox');
 			expect(listbox.getAttribute('aria-activedescendant')).toBe('inbox-item-s1-t1');
 		});
 
 		it('item cards have role=option and aria-selected', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const option = screen.getByRole('option');
 			expect(option.getAttribute('aria-selected')).toBe('true');
 		});
 
 		it('badge has aria-live=polite', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const liveRegion = screen.getByText('0 need action');
 			expect(liveRegion.getAttribute('aria-live')).toBe('polite');
 		});
 
 		it('filter control has aria-label="Filter sessions"', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const filterControl = container.querySelector('[aria-label="Filter sessions"]');
 			expect(filterControl).toBeTruthy();
@@ -1041,12 +805,7 @@ describe('AgentInbox', () => {
 
 		it('sort control has aria-label="Sort sessions"', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const sortControl = container.querySelector('[aria-label="Sort sessions"]');
 			expect(sortControl).toBeTruthy();
@@ -1054,12 +813,7 @@ describe('AgentInbox', () => {
 
 		it('filter segment buttons have aria-pressed attribute', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const filterControl = container.querySelector('[aria-label="Filter sessions"]');
 			expect(filterControl).toBeTruthy();
@@ -1074,12 +828,7 @@ describe('AgentInbox', () => {
 
 		it('sort segment buttons have aria-pressed attribute', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const sortControl = container.querySelector('[aria-label="Sort sessions"]');
 			expect(sortControl).toBeTruthy();
@@ -1094,12 +843,7 @@ describe('AgentInbox', () => {
 
 		it('aria-pressed updates when filter changes', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const filterControl = container.querySelector('[aria-label="Filter sessions"]');
 			const buttons = filterControl!.querySelectorAll('button');
@@ -1116,14 +860,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('empty states', () => {
 		it('shows "All caught up" with checkmark icon when filter is "All" and no items', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Default filter is 'unread'; switch to 'All' to test this empty state
 			fireEvent.click(screen.getByText('All'));
 			expect(screen.getByTestId('inbox-empty-state')).toBeTruthy();
@@ -1132,14 +869,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('shows "No unread sessions." without icon when filter is "Unread"', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Switch to "Unread" filter
 			fireEvent.click(screen.getByText('Unread'));
 			expect(screen.getByText('No unread sessions.')).toBeTruthy();
@@ -1147,14 +877,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('shows "No read sessions with activity." without icon when filter is "Read"', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Switch to "Read" filter
 			fireEvent.click(screen.getByText('Read'));
 			expect(screen.getByText('No read sessions with activity.')).toBeTruthy();
@@ -1163,17 +886,8 @@ describe('AgentInbox', () => {
 
 		it('shows empty state when modal is open and user switches to a filter with no results', () => {
 			// Session in 'idle' state with unread — visible under 'all' and 'unread', but not 'read'
-			const sessions = [
-				createInboxSession('s1', 't1', { state: 'idle' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { state: 'idle' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Initially visible under "All"
 			expect(screen.getByText('Session s1')).toBeTruthy();
 
@@ -1185,14 +899,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('empty state icon has 32px size and 50% opacity', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Default filter is 'unread' (no icon); switch to 'All' which shows the icon
 			fireEvent.click(screen.getByText('All'));
 			const icon = screen.getByTestId('inbox-empty-icon');
@@ -1202,14 +909,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('empty state text has 14px font, textDim color, max-width 280px, and center alignment', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Default filter is 'unread' → shows "No unread sessions."
 			const text = screen.getByText('No unread sessions.');
 			expect(text.style.fontSize).toBe('14px');
@@ -1219,12 +919,7 @@ describe('AgentInbox', () => {
 
 		it('empty state is centered vertically and horizontally', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const emptyState = screen.getByTestId('inbox-empty-state');
 			// Uses flexbox centering
@@ -1234,17 +929,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('modal does NOT close when filter has no results — stays open with empty state', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { state: 'idle' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { state: 'idle' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Switch to "Read" — no items (hasUnread=true), but modal stays open
 			fireEvent.click(screen.getByText('Read'));
 			expect(onClose).not.toHaveBeenCalled();
@@ -1259,18 +945,8 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('virtualization', () => {
 		it('renders items via the virtual list', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const virtualList = screen.getByTestId('virtual-list');
 			expect(virtualList).toBeTruthy();
 			const options = screen.getAllByRole('option');
@@ -1288,30 +964,13 @@ describe('AgentInbox', () => {
 				createInboxSession('s2', 't2'),
 				createInboxSession('s3', 't3'),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('3 need action')).toBeTruthy();
 		});
 
 		it('first item is selected by default', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const options = screen.getAllByRole('option');
 			expect(options[0].getAttribute('aria-selected')).toBe('true');
 			expect(options[1].getAttribute('aria-selected')).toBe('false');
@@ -1328,14 +987,7 @@ describe('AgentInbox', () => {
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
 				createInboxSession('s2', 't2'),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
 			// Switch to Grouped mode
 			fireEvent.click(screen.getByText('Grouped'));
 			// Group headers should have chevron-down icons (expanded by default)
@@ -1349,14 +1001,7 @@ describe('AgentInbox', () => {
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
 				createInboxSession('s2', 't2'),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
 			// Switch to Grouped mode
 			fireEvent.click(screen.getByText('Grouped'));
 
@@ -1385,14 +1030,7 @@ describe('AgentInbox', () => {
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
 				createInboxSession('s2', 't2'),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
 			// Switch to Grouped mode
 			fireEvent.click(screen.getByText('Grouped'));
 
@@ -1422,14 +1060,7 @@ describe('AgentInbox', () => {
 	describe('InboxItemCard', () => {
 		it('uses background fill for selection, not border or outline', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const option = screen.getByRole('option');
 			// Selected card should have a non-transparent background (accent at 8% opacity)
 			expect(option.style.backgroundColor).not.toBe('transparent');
@@ -1439,18 +1070,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('non-selected card has transparent background and no outline', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const options = screen.getAllByRole('option');
 			// Second item is not selected
 			expect(options[1].style.backgroundColor).toBe('transparent');
@@ -1459,14 +1080,7 @@ describe('AgentInbox', () => {
 
 		it('card row 1 shows session name in bold', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const sessionName = screen.getByText('Session s1');
 			expect(sessionName.style.fontWeight).toBe('600');
 			expect(sessionName.style.fontSize).toBe('14px');
@@ -1474,33 +1088,17 @@ describe('AgentInbox', () => {
 
 		it('card row 2 shows last message in muted color', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Smart summary: waiting_input with no recognized AI source → "Waiting: awaiting your response"
 			const lastMsg = screen.getByText('Waiting: awaiting your response');
-			expect(lastMsg.style.fontSize).toBe('13px');
+			expect(lastMsg.style.fontSize).toBe('12px');
 			// JSDOM converts hex to rgb; textDim #6272a4 = rgb(98, 114, 164)
 			expect(lastMsg.style.color).toBeTruthy();
 		});
 
 		it('card row 3 git branch has SF Mono/Menlo/monospace font stack', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { worktreeBranch: 'main' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { worktreeBranch: 'main' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const branchBadge = screen.getByTestId('git-branch-badge');
 			// JSDOM normalizes single quotes to double quotes in CSS values
 			expect(branchBadge.style.fontFamily).toBe('"SF Mono", "Menlo", monospace');
@@ -1508,14 +1106,7 @@ describe('AgentInbox', () => {
 
 		it('card row 3 status badge renders as colored pill', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// "Needs Input" status badge — now only appears in the card badge (not filter button)
 			const badge = screen.getByText('Needs Input');
 			expect(badge.tagName).toBe('SPAN');
@@ -1526,30 +1117,24 @@ describe('AgentInbox', () => {
 
 		it('card has no emoji characters in Row 1 (agent icon removed)', () => {
 			const groups = [createGroup({ id: 'g1', name: 'Test Group' })];
-			const sessions = [
-				createInboxSession('s1', 't1', { groupId: 'g1' }),
-			];
+			const sessions = [createInboxSession('s1', 't1', { groupId: 'g1' })];
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />
 			);
 			const option = container.querySelector('[role="option"]');
 			const textContent = option?.textContent ?? '';
 			// No emoji characters anywhere — agent icon has been removed
-			const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}]/u;
+			const emojiRegex =
+				/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2702}-\u{27B0}]/u;
 			expect(emojiRegex.test(textContent)).toBe(false);
 		});
 
 		it('Row 1 uses pipe separators instead of agent icon and slash', () => {
 			const groups = [createGroup({ id: 'g1', name: 'Test Group' })];
-			const sessions = [
-				createInboxSession('s1', 't1', { groupId: 'g1' }),
-			];
-			const { container } = render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
+			const sessions = [createInboxSession('s1', 't1', { groupId: 'g1' })];
+			const { container } = render(
+				<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />
+			);
 			// Agent icon (title="claude-code") should no longer exist
 			const agentIcon = container.querySelector('[title="claude-code"]');
 			expect(agentIcon).toBeNull();
@@ -1570,31 +1155,17 @@ describe('AgentInbox', () => {
 					] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// The card should show "My Session | Refactor" or "My Session | Debug" (pipe separator)
 			const sessionNames = screen.getAllByText(/My Session/);
 			// At least one should contain a pipe separator for tab name
-			const withTabName = sessionNames.find(el => el.textContent?.includes('|'));
+			const withTabName = sessionNames.find((el) => el.textContent?.includes('|'));
 			expect(withTabName).toBeTruthy();
 		});
 
 		it('does not render tab name separator for single-tab sessions', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const sessionName = screen.getByText('Session s1');
 			// Single tab — no pipe separator in the session name element
 			expect(sessionName.textContent).toBe('Session s1');
@@ -1602,14 +1173,7 @@ describe('AgentInbox', () => {
 
 		it('card has correct height and border-radius', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const option = screen.getByRole('option');
 			// height = ITEM_HEIGHT (120) - 12 = 108px
 			expect(option.style.height).toBe('108px');
@@ -1618,17 +1182,8 @@ describe('AgentInbox', () => {
 
 		it('group name shown in muted 12px font with uppercase style', () => {
 			const groups = [createGroup({ id: 'g1', name: 'Dev Team' })];
-			const sessions = [
-				createInboxSession('s1', 't1', { groupId: 'g1' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={groups}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { groupId: 'g1' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={groups} onClose={onClose} />);
 			const groupName = screen.getByText('Dev Team');
 			expect(groupName.style.fontSize).toBe('12px');
 			// JSDOM converts hex to rgb — just verify color is set
@@ -1640,14 +1195,7 @@ describe('AgentInbox', () => {
 
 		it('timestamp shown right-aligned in muted 12px font', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const timestamp = screen.getByText('5m ago');
 			expect(timestamp.style.fontSize).toBe('12px');
 			// JSDOM converts hex to rgb — just verify color is set
@@ -1656,33 +1204,15 @@ describe('AgentInbox', () => {
 		});
 
 		it('context usage shows percentage text', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 72 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 72 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const ctx = screen.getByText('Context: 72%');
 			expect(ctx.style.fontSize).toBe('11px');
 		});
 
 		it('context usage bar uses green color for 0-59%', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 30 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 30 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const bar = screen.getByTestId('context-usage-bar');
 			const fill = bar.firstElementChild as HTMLElement;
 			// JSDOM converts hex to rgb — #50fa7b → rgb(80, 250, 123)
@@ -1691,17 +1221,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('context usage bar uses theme warning color for 60-79%', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 65 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 65 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const bar = screen.getByTestId('context-usage-bar');
 			const fill = bar.firstElementChild as HTMLElement;
 			// JSDOM converts hex to rgb — theme.colors.warning #f1fa8c → rgb(241, 250, 140)
@@ -1710,17 +1231,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('context usage bar uses red color for 80-100%', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 90 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 90 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const bar = screen.getByTestId('context-usage-bar');
 			const fill = bar.firstElementChild as HTMLElement;
 			// JSDOM converts hex to rgb — #ff5555 → rgb(255, 85, 85)
@@ -1729,84 +1241,39 @@ describe('AgentInbox', () => {
 		});
 
 		it('context usage text color matches bar color', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 75 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 75 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const text = screen.getByTestId('context-usage-text');
 			// JSDOM converts hex to rgb — theme.colors.warning #f1fa8c → rgb(241, 250, 140)
 			expect(text.style.color).toBe('rgb(241, 250, 140)');
 		});
 
 		it('shows placeholder "Context: \u2014" when contextUsage is undefined', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: undefined }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: undefined })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Context: \u2014')).toBeTruthy();
 			// No bar should render
 			expect(screen.queryByTestId('context-usage-bar')).toBeNull();
 		});
 
 		it('shows placeholder "Context: \u2014" when contextUsage is NaN', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: NaN }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: NaN })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Context: \u2014')).toBeTruthy();
 			expect(screen.queryByTestId('context-usage-bar')).toBeNull();
 		});
 
 		it('context usage bar is 4px tall and full width', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 50 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 50 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const bar = screen.getByTestId('context-usage-bar');
 			expect(bar.style.height).toBe('4px');
 			expect(bar.style.width).toBe('100%');
 		});
 
 		it('context usage bar clamps percentage between 0 and 100', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 150 }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 150 })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const bar = screen.getByTestId('context-usage-bar');
 			const fill = bar.firstElementChild as HTMLElement;
 			expect(fill.style.width).toBe('100%');
@@ -1816,30 +1283,14 @@ describe('AgentInbox', () => {
 			const sessions = [
 				createInboxSession('s1', 't1'), // no worktreeBranch
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.queryByTestId('git-branch-badge')).toBeNull();
 		});
 
 		it('truncates git branch name to 25 chars with ellipsis', () => {
 			const longBranch = 'feature/very-long-branch-name-that-exceeds-limit';
-			const sessions = [
-				createInboxSession('s1', 't1', { worktreeBranch: longBranch }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { worktreeBranch: longBranch })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badge = screen.getByTestId('git-branch-badge');
 			// Should contain the ⎇ icon prefix
 			expect(badge.textContent).toContain('⎇');
@@ -1851,49 +1302,22 @@ describe('AgentInbox', () => {
 
 		it('does not truncate git branch name at exactly 25 chars', () => {
 			const exactBranch = 'feature/exactly-25-chars!'; // 25 chars
-			const sessions = [
-				createInboxSession('s1', 't1', { worktreeBranch: exactBranch }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { worktreeBranch: exactBranch })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badge = screen.getByTestId('git-branch-badge');
 			expect(badge.textContent).toContain(exactBranch);
 			expect(badge.textContent).not.toContain('...');
 		});
 
 		it('does not render git branch badge for empty string branch', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { worktreeBranch: '' }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { worktreeBranch: '' })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.queryByTestId('git-branch-badge')).toBeNull();
 		});
 
 		it('renders context placeholder text when undefined (not hidden)', () => {
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: undefined }),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: undefined })];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Now shows "Context: —" placeholder instead of hiding
 			expect(screen.getByText('Context: \u2014')).toBeTruthy();
 		});
@@ -1901,12 +1325,7 @@ describe('AgentInbox', () => {
 		it('card row wrapper applies 12px total vertical gap (6px top + 6px bottom padding)', () => {
 			const sessions = [createInboxSession('s1', 't1')];
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			// The row wrapper wraps each card with padding for spacing
 			// DOM: rowWrapper > badgeFlexContainer > cardContentWrapper > option
@@ -1927,17 +1346,8 @@ describe('AgentInbox', () => {
 					warning: '#ff8800', // custom warning color
 				},
 			};
-			const sessions = [
-				createInboxSession('s1', 't1', { contextUsage: 70 }),
-			];
-			render(
-				<AgentInbox
-					theme={customTheme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1', { contextUsage: 70 })];
+			render(<AgentInbox theme={customTheme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const bar = screen.getByTestId('context-usage-bar');
 			const fill = bar.firstElementChild as HTMLElement;
 			// #ff8800 → rgb(255, 136, 0) — proves it reads from theme, not hardcoded
@@ -1945,18 +1355,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('renders divider between inbox items', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const options = screen.getAllByRole('option');
 			// DOM: rowWrapper > badgeFlexContainer > cardContentWrapper > option
 			const firstRowWrapper = options[0].parentElement!.parentElement!.parentElement!;
@@ -1967,18 +1367,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('selected card has tabIndex=0, non-selected has tabIndex=-1', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const options = screen.getAllByRole('option');
 			expect(options[0].getAttribute('tabindex')).toBe('0');
 			expect(options[1].getAttribute('tabindex')).toBe('-1');
@@ -2057,30 +1447,16 @@ describe('AgentInbox', () => {
 	// Visual polish — multi-line messages & pipe separators
 	// ==========================================================================
 	describe('visual polish — multi-line & pipes', () => {
-		it('lastMessage displays up to 3 lines (WebkitLineClamp: 3)', () => {
+		it('lastMessage displays up to 2 lines (WebkitLineClamp: 2)', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const lastMsg = screen.getByText('Waiting: awaiting your response');
-			expect(lastMsg.style.WebkitLineClamp).toBe('3');
+			expect(lastMsg.style.WebkitLineClamp).toBe('2');
 		});
 
 		it('lastMessage does NOT use whiteSpace: nowrap', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const lastMsg = screen.getByText('Waiting: awaiting your response');
 			expect(lastMsg.style.whiteSpace).not.toBe('nowrap');
 		});
@@ -2088,12 +1464,7 @@ describe('AgentInbox', () => {
 		it('Edit3 pencil icon is NOT rendered in Row 1', () => {
 			const sessions = [createInboxSession('s1', 't1')];
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			// No Edit3 icon should exist anywhere in the card
 			expect(container.querySelector('[data-testid="edit3-icon"]')).toBeNull();
@@ -2103,12 +1474,7 @@ describe('AgentInbox', () => {
 			// Session without groupId → no groupName → no leading pipe
 			const sessions = [createInboxSession('s1', 't1')];
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			const option = container.querySelector('[role="option"]');
 			const textContent = option?.textContent ?? '';
@@ -2119,26 +1485,15 @@ describe('AgentInbox', () => {
 		});
 
 		it('cards beyond index 9 do not show numeric badge', () => {
-			const sessions = Array.from({ length: 12 }, (_, i) =>
-				createInboxSession(`s${i}`, `t${i}`)
-			);
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = Array.from({ length: 12 }, (_, i) => createInboxSession(`s${i}`, `t${i}`));
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badges = screen.getAllByTestId('number-badge');
 			// Only first 10 items (index 0-9) get number badges
 			expect(badges.length).toBe(10);
 		});
 
 		it('pressing Meta+5 selects and opens fifth card', () => {
-			const sessions = Array.from({ length: 6 }, (_, i) =>
-				createInboxSession(`s${i}`, `t${i}`)
-			);
+			const sessions = Array.from({ length: 6 }, (_, i) => createInboxSession(`s${i}`, `t${i}`));
 			render(
 				<AgentInbox
 					theme={theme}
@@ -2175,17 +1530,14 @@ describe('AgentInbox', () => {
 			const sessions = [createInboxSession('s1', 't1')];
 			// First render — default filter is 'unread'
 			const { unmount } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			// Switch to 'all' filter
 			fireEvent.click(screen.getByText('All'));
 			// Verify 'All' is now pressed
-			const filterControl = screen.getByRole('dialog').querySelector('[aria-label="Filter sessions"]');
+			const filterControl = screen
+				.getByRole('dialog')
+				.querySelector('[aria-label="Filter sessions"]');
 			const allButton = filterControl!.querySelectorAll('button')[0];
 			expect(allButton.getAttribute('aria-pressed')).toBe('true');
 
@@ -2193,16 +1545,11 @@ describe('AgentInbox', () => {
 			unmount();
 
 			// Re-render (simulates reopening modal) — store retains the data
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Filter should persist as 'all'
-			const filterControl2 = screen.getByRole('dialog').querySelector('[aria-label="Filter sessions"]');
+			const filterControl2 = screen
+				.getByRole('dialog')
+				.querySelector('[aria-label="Filter sessions"]');
 			const allButton2 = filterControl2!.querySelectorAll('button')[0];
 			expect(allButton2.getAttribute('aria-pressed')).toBe('true');
 		});
@@ -2211,12 +1558,7 @@ describe('AgentInbox', () => {
 			seedInboxStore();
 			const sessions = [createInboxSession('s1', 't1')];
 			const { unmount } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			// Switch to 'By Agent' sort
 			fireEvent.click(screen.getByText('By Agent'));
@@ -2226,14 +1568,7 @@ describe('AgentInbox', () => {
 
 			unmount();
 
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const sortControl2 = screen.getByRole('dialog').querySelector('[aria-label="Sort sessions"]');
 			const byAgentButton2 = sortControl2!.querySelectorAll('button')[3];
 			expect(byAgentButton2.getAttribute('aria-pressed')).toBe('true');
@@ -2242,12 +1577,7 @@ describe('AgentInbox', () => {
 		it('expanded state persists after modal close and reopen', () => {
 			seedInboxStore();
 			const { unmount } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			// Expand the modal
 			fireEvent.click(screen.getByTitle('Expand'));
@@ -2256,14 +1586,7 @@ describe('AgentInbox', () => {
 
 			unmount();
 
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Expanded state should persist
 			expect(screen.getByRole('dialog').style.width).toBe(`${expandedWidth}px`);
 		});
@@ -2275,12 +1598,7 @@ describe('AgentInbox', () => {
 	describe('visual polish', () => {
 		it('modal overlay uses 150ms fade-in animation', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const overlay = container.querySelector('.modal-overlay');
 			expect(overlay).toBeTruthy();
@@ -2302,9 +1620,7 @@ describe('AgentInbox', () => {
 			const color1 = text1.style.color;
 			unmount();
 
-			render(
-				<AgentInbox theme={theme2} sessions={sessions2} groups={[]} onClose={onClose} />
-			);
+			render(<AgentInbox theme={theme2} sessions={sessions2} groups={[]} onClose={onClose} />);
 			const text2 = screen.getByTestId('context-usage-text');
 			const color2 = text2.style.color;
 
@@ -2323,42 +1639,21 @@ describe('AgentInbox', () => {
 				},
 			};
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={customTheme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={customTheme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const sessionName = screen.getByText('Session s1');
 			// textMain #222222 → rgb(34, 34, 34)
 			expect(sessionName.style.color).toBe('rgb(34, 34, 34)');
 		});
 
 		it('modal background uses theme.colors.bgActivity', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// bgActivity #1e1f29 → rgb(30, 31, 41)
 			expect(dialog.style.backgroundColor).toBe('rgb(30, 31, 41)');
 		});
 
 		it('modal border uses theme.colors.border', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// border #44475a → rgb(68, 71, 90)
 			expect(dialog.style.borderColor).toBe('rgb(68, 71, 90)');
@@ -2370,14 +1665,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('expand / collapse toggle', () => {
 		it('renders Maximize2 icon in normal mode with "Expand" title', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const expandBtn = screen.getByTitle('Expand');
 			expect(expandBtn).toBeTruthy();
 			expect(expandBtn.getAttribute('aria-label')).toBe('Expand modal');
@@ -2386,14 +1674,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('toggles to Minimize2 icon with "Collapse" title after click', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const expandBtn = screen.getByTitle('Expand');
 			fireEvent.click(expandBtn);
 			const collapseBtn = screen.getByTitle('Collapse');
@@ -2404,27 +1685,13 @@ describe('AgentInbox', () => {
 		});
 
 		it('uses 780px width in normal mode', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			expect(dialog.style.width).toBe('780px');
 		});
 
 		it('uses expanded width (min(90vw, 1200)) in expanded mode', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			fireEvent.click(screen.getByTitle('Expand'));
 			const dialog = screen.getByRole('dialog');
 			const expectedWidth = Math.min(window.innerWidth * 0.9, 1200);
@@ -2433,43 +1700,22 @@ describe('AgentInbox', () => {
 		});
 
 		it('sets maxHeight to 80vh in normal mode and 90vh in expanded mode', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			expect(dialog.style.maxHeight).toBe('80vh');
 			fireEvent.click(screen.getByTitle('Expand'));
 			expect(dialog.style.maxHeight).toBe('90vh');
 		});
 
-		it('applies 200ms transition for width and max-height', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+		it('applies 200ms transition for width and height/max-height', () => {
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			expect(dialog.style.transition).toContain('width 200ms ease');
-			expect(dialog.style.transition).toContain('max-height 200ms ease');
+			expect(dialog.style.transition).toContain('height 200ms ease');
 		});
 
 		it('toggles back to normal mode on second click', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Expand
 			fireEvent.click(screen.getByTitle('Expand'));
 			const expandedWidth = Math.min(window.innerWidth * 0.9, 1200);
@@ -2480,28 +1726,14 @@ describe('AgentInbox', () => {
 		});
 
 		it('expand button uses same p-1.5 rounded pattern as close button', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const expandBtn = screen.getByTitle('Expand');
 			expect(expandBtn.className).toContain('p-1.5');
 			expect(expandBtn.className).toContain('rounded');
 		});
 
 		it('expand button hover sets accent background via JS handlers', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const expandBtn = screen.getByTitle('Expand');
 			fireEvent.mouseEnter(expandBtn);
 			// `${theme.colors.accent}20` = #bd93f920 → JSDOM converts to rgba(189, 147, 249, 0.125)
@@ -2516,17 +1748,8 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('number badges', () => {
 		it('renders number badges 1-9 and 0 for first 10 items', () => {
-			const sessions = Array.from({ length: 10 }, (_, i) =>
-				createInboxSession(`s${i}`, `t${i}`)
-			);
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = Array.from({ length: 10 }, (_, i) => createInboxSession(`s${i}`, `t${i}`));
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badges = screen.getAllByTestId('number-badge');
 			expect(badges.length).toBe(10);
 			// First 9 items show 1-9, 10th item shows 0
@@ -2537,14 +1760,7 @@ describe('AgentInbox', () => {
 
 		it('number badge uses w-5 h-5 rounded text-xs font-bold classes', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badge = screen.getByTestId('number-badge');
 			expect(badge.className).toContain('w-5');
 			expect(badge.className).toContain('h-5');
@@ -2555,14 +1771,7 @@ describe('AgentInbox', () => {
 
 		it('number badge uses bgMain and textDim theme colors', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const badge = screen.getByTestId('number-badge');
 			// bgMain #282a36 → rgb(40, 42, 54)
 			expect(badge.style.backgroundColor).toBe('rgb(40, 42, 54)');
@@ -2576,10 +1785,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('Cmd/Ctrl+number hotkeys', () => {
 		it('Meta+1 selects and navigates to first item', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(
 				<AgentInbox
 					theme={theme}
@@ -2596,10 +1802,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('Meta+2 selects and navigates to second item', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(
 				<AgentInbox
 					theme={theme}
@@ -2648,9 +1851,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('Meta+0 selects 10th item', () => {
-			const sessions = Array.from({ length: 10 }, (_, i) =>
-				createInboxSession(`s${i}`, `t${i}`)
-			);
+			const sessions = Array.from({ length: 10 }, (_, i) => createInboxSession(`s${i}`, `t${i}`));
 			render(
 				<AgentInbox
 					theme={theme}
@@ -2688,14 +1889,7 @@ describe('AgentInbox', () => {
 	describe('footer pattern', () => {
 		it('footer uses justify-between layout with count left and hints right', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('1 items')).toBeTruthy();
 			// Hints are in a single span with bullet separators
 			const hintsSpan = screen.getByText(/quick select/);
@@ -2703,14 +1897,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('footer shows platform-aware shortcut key via formatShortcutKeys', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Mock returns ⌘ for Meta
 			expect(screen.getByText(/⌘1-9/)).toBeTruthy();
 		});
@@ -2722,12 +1909,7 @@ describe('AgentInbox', () => {
 	describe('starred filter', () => {
 		it('shows ★ Starred option in filter controls', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const filterControl = container.querySelector('[aria-label="Filter sessions"]');
 			expect(filterControl).toBeTruthy();
@@ -2742,19 +1924,10 @@ describe('AgentInbox', () => {
 					id: 's1',
 					name: 'Starred Agent',
 					state: 'idle',
-					aiTabs: [
-						createTab({ id: 't1', hasUnread: true, starred: true }),
-					] as any,
+					aiTabs: [createTab({ id: 't1', hasUnread: true, starred: true })] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const option = screen.getByRole('option');
 			expect(option.textContent).toContain('★');
 		});
@@ -2765,23 +1938,16 @@ describe('AgentInbox', () => {
 					id: 's1',
 					name: 'Starred Agent',
 					state: 'idle',
-					aiTabs: [
-						createTab({ id: 't1', hasUnread: true, starred: true }),
-					] as any,
+					aiTabs: [createTab({ id: 't1', hasUnread: true, starred: true })] as any,
 				}),
 			];
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			// Find the ★ character span inside the option card
 			const option = container.querySelector('[role="option"]');
 			const allSpans = option!.querySelectorAll('span');
-			const starSpan = Array.from(allSpans).find(s => s.textContent === '★');
+			const starSpan = Array.from(allSpans).find((s) => s.textContent === '★');
 			expect(starSpan).toBeTruthy();
 			// theme.colors.warning = #f1fa8c → rgb(241, 250, 140)
 			expect(starSpan!.style.color).toBe('rgb(241, 250, 140)');
@@ -2793,32 +1959,18 @@ describe('AgentInbox', () => {
 					id: 's1',
 					name: 'Non-Starred',
 					state: 'idle',
-					aiTabs: [
-						createTab({ id: 't1', hasUnread: true, starred: false }),
-					] as any,
+					aiTabs: [createTab({ id: 't1', hasUnread: true, starred: false })] as any,
 				}),
 			];
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />
 			);
 			const option = container.querySelector('[role="option"]');
 			expect(option!.textContent).not.toContain('★');
 		});
 
 		it('empty state shows "No starred sessions." for starred filter', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			// Click the ★ Starred filter button
 			fireEvent.click(screen.getByText('★ Starred'));
 			expect(screen.getByText('No starred sessions.')).toBeTruthy();
@@ -2831,12 +1983,7 @@ describe('AgentInbox', () => {
 	describe('byAgent sort mode', () => {
 		it('shows By Agent option in sort controls', () => {
 			const { container } = render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
+				<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />
 			);
 			const sortControl = container.querySelector('[aria-label="Sort sessions"]');
 			expect(sortControl).toBeTruthy();
@@ -2860,14 +2007,7 @@ describe('AgentInbox', () => {
 					aiTabs: [createTab({ id: 't2', hasUnread: true })] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Switch to By Agent sort
 			fireEvent.click(screen.getByText('By Agent'));
 			// Group headers should appear with agent names
@@ -2887,14 +2027,7 @@ describe('AgentInbox', () => {
 					aiTabs: [createTab({ id: 't1', hasUnread: true })] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			fireEvent.click(screen.getByText('By Agent'));
 			// The header should show "(claude-code)" after the agent name
 			expect(screen.getByText('(claude-code)')).toBeTruthy();
@@ -2915,14 +2048,7 @@ describe('AgentInbox', () => {
 					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Switch to 'All' filter first so we see both, then switch to By Agent
 			fireEvent.click(screen.getByText('All'));
 			fireEvent.click(screen.getByText('By Agent'));
@@ -2947,14 +2073,7 @@ describe('AgentInbox', () => {
 					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Switch to 'All' filter so both are visible, then to By Agent
 			fireEvent.click(screen.getByText('All'));
 			fireEvent.click(screen.getByText('By Agent'));
@@ -2985,14 +2104,7 @@ describe('AgentInbox', () => {
 					aiTabs: [createTab({ id: 't2', hasUnread: false })] as any,
 				}),
 			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			// Switch to All filter + By Agent sort (Agent Two gets auto-collapsed)
 			fireEvent.click(screen.getByText('All'));
 			fireEvent.click(screen.getByText('By Agent'));
@@ -3051,14 +2163,7 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('close button hover handlers', () => {
 		it('mouseEnter sets background to accent color at 12.5% opacity', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const closeBtn = screen.getByTitle('Close (Esc)');
 			fireEvent.mouseEnter(closeBtn);
 			// `${theme.colors.accent}20` = #bd93f920 → JSDOM converts to rgba(189, 147, 249, 0.125)
@@ -3066,14 +2171,7 @@ describe('AgentInbox', () => {
 		});
 
 		it('mouseLeave resets background to transparent', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			const closeBtn = screen.getByTitle('Close (Esc)');
 			// First hover, then leave
 			fireEvent.mouseEnter(closeBtn);
@@ -3088,27 +2186,13 @@ describe('AgentInbox', () => {
 	// ==========================================================================
 	describe('Focus Mode', () => {
 		it('starts in list view mode', () => {
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={[]}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
 			expect(screen.getByText('Unified Inbox')).toBeTruthy();
 		});
 
 		it('enters focus mode when F key is pressed', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			fireEvent.keyDown(dialog, { key: 'f' });
 			// Focus mode shows back button with "Inbox" text
@@ -3117,14 +2201,7 @@ describe('AgentInbox', () => {
 
 		it('exits focus mode on Escape', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });
@@ -3136,14 +2213,7 @@ describe('AgentInbox', () => {
 
 		it('does not close modal on Escape in focus mode', () => {
 			const sessions = [createInboxSession('s1', 't1')];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });
@@ -3156,18 +2226,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('Cmd+ArrowLeft navigates to previous item in focus mode', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });
@@ -3180,18 +2240,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('Cmd+ArrowRight navigates to next item in focus mode', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });
@@ -3202,18 +2252,8 @@ describe('AgentInbox', () => {
 		});
 
 		it('plain ArrowLeft/Right does NOT navigate in focus mode', () => {
-			const sessions = [
-				createInboxSession('s1', 't1'),
-				createInboxSession('s2', 't2'),
-			];
-			render(
-				<AgentInbox
-					theme={theme}
-					sessions={sessions}
-					groups={[]}
-					onClose={onClose}
-				/>
-			);
+			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
+			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			// Enter focus mode
 			fireEvent.keyDown(dialog, { key: 'f' });

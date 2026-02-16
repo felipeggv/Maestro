@@ -155,13 +155,15 @@ function InboxItemCardContent({
 				<div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
 					{item.groupName && (
 						<>
-							<span style={{
-								fontSize: 12,
-								color: theme.colors.textDim,
-								whiteSpace: 'nowrap',
-								textTransform: 'uppercase',
-								letterSpacing: '0.5px',
-							}}>
+							<span
+								style={{
+									fontSize: 12,
+									color: theme.colors.textDim,
+									whiteSpace: 'nowrap',
+									textTransform: 'uppercase',
+									letterSpacing: '0.5px',
+								}}
+							>
 								{item.groupName}
 							</span>
 							<span style={{ fontSize: 12, color: theme.colors.textDim, padding: '0 6px' }}>|</span>
@@ -181,14 +183,23 @@ function InboxItemCardContent({
 						{item.sessionName}
 						{item.tabName && (
 							<>
-								<span style={{ fontSize: 12, color: theme.colors.textDim, padding: '0 6px', fontWeight: 400 }}>|</span>
-								<span style={{ fontWeight: 400, color: theme.colors.textDim }}>
-									{item.tabName}
+								<span
+									style={{
+										fontSize: 12,
+										color: theme.colors.textDim,
+										padding: '0 6px',
+										fontWeight: 400,
+									}}
+								>
+									|
 								</span>
+								<span style={{ fontWeight: 400, color: theme.colors.textDim }}>{item.tabName}</span>
 							</>
 						)}
 					</span>
-					{item.starred && <span style={{ color: theme.colors.warning, fontSize: 12, flexShrink: 0 }}>★</span>}
+					{item.starred && (
+						<span style={{ color: theme.colors.warning, fontSize: 12, flexShrink: 0 }}>★</span>
+					)}
 					<span
 						style={{
 							fontSize: 12,
@@ -201,14 +212,14 @@ function InboxItemCardContent({
 					</span>
 				</div>
 
-				{/* Row 2: last message (3-line clamp) */}
+				{/* Row 2: last message (2-line clamp) */}
 				<div
 					style={{
-						fontSize: 13,
+						fontSize: 12,
 						color: theme.colors.textDim,
 						overflow: 'hidden',
 						display: '-webkit-box',
-						WebkitLineClamp: 3,
+						WebkitLineClamp: 2,
 						WebkitBoxOrient: 'vertical' as const,
 						lineHeight: '1.4',
 					}}
@@ -406,30 +417,36 @@ function InboxRow({
 					color: theme.colors.textDim,
 					letterSpacing: '0.5px',
 					textTransform: 'uppercase',
-					borderBottom: `1px solid ${theme.colors.border}60`,
+					borderBottom: `2px solid ${theme.colors.border}40`,
+					borderLeft: `3px solid ${theme.colors.accent}40`,
 					cursor: 'pointer',
 				}}
 				onClick={() => onToggleGroup(row.groupName)}
 			>
-				{isCollapsed
-					? <ChevronRight style={{ width: 14, height: 14, marginRight: 4, flexShrink: 0 }} />
-					: <ChevronDown style={{ width: 14, height: 14, marginRight: 4, flexShrink: 0 }} />
-				}
+				{isCollapsed ? (
+					<ChevronRight style={{ width: 14, height: 14, marginRight: 4, flexShrink: 0 }} />
+				) : (
+					<ChevronDown style={{ width: 14, height: 14, marginRight: 4, flexShrink: 0 }} />
+				)}
 				{row.groupName}
 				{sortMode === 'byAgent' && agentToolType && (
-					<span style={{ fontSize: 11, color: theme.colors.textDim, fontWeight: 400, marginLeft: 4 }}>
+					<span
+						style={{ fontSize: 11, color: theme.colors.textDim, fontWeight: 400, marginLeft: 4 }}
+					>
 						({agentToolType})
 					</span>
 				)}
 				{sortMode === 'byAgent' && unreadCount > 0 && (
-					<span style={{
-						fontSize: 11,
-						marginLeft: 'auto',
-						padding: '1px 6px',
-						borderRadius: 10,
-						backgroundColor: theme.colors.warning + '20',
-						color: theme.colors.warning,
-					}}>
+					<span
+						style={{
+							fontSize: 11,
+							marginLeft: 'auto',
+							padding: '1px 6px',
+							borderRadius: 10,
+							backgroundColor: theme.colors.warning + '20',
+							color: theme.colors.warning,
+						}}
+					>
 						{unreadCount} unread
 					</span>
 				)}
@@ -520,7 +537,7 @@ export default function InboxListView({
 	}, [filterMode, sortMode, isExpanded]);
 
 	const toggleGroup = useCallback((groupName: string) => {
-		setCollapsedGroups(prev => {
+		setCollapsedGroups((prev) => {
 			const next = new Set(prev);
 			if (next.has(groupName)) {
 				next.delete(groupName);
@@ -554,22 +571,52 @@ export default function InboxListView({
 	const allRows = useMemo(() => buildRows(items, sortMode), [items, sortMode]);
 	const rows = useMemo(() => {
 		if (collapsedGroups.size === 0) return allRows;
-		return allRows.filter(row => {
+		return allRows.filter((row) => {
 			if (row.type === 'header') return true;
 			// For byAgent mode, collapse by sessionName; for grouped mode, by groupName
-			const collapseKey = sortMode === 'byAgent' ? row.item.sessionName : (row.item.groupName ?? 'Ungrouped');
+			const collapseKey =
+				sortMode === 'byAgent' ? row.item.sessionName : (row.item.groupName ?? 'Ungrouped');
 			return !collapsedGroups.has(collapseKey);
 		});
 	}, [allRows, collapsedGroups, sortMode]);
 
+	// Auto-advance selectedIndex if current item is in a collapsed group
+	useEffect(() => {
+		if (collapsedGroups.size === 0) return;
+		const selectedItem = items[selectedIndex];
+		if (!selectedItem) return;
+		const groupKey = sortMode === 'byAgent'
+			? selectedItem.sessionName
+			: (selectedItem.groupName ?? 'Ungrouped');
+		if (collapsedGroups.has(groupKey)) {
+			// Find next visible item after current index
+			for (let i = selectedIndex + 1; i < items.length; i++) {
+				const item = items[i];
+				const key = sortMode === 'byAgent'
+					? item.sessionName
+					: (item.groupName ?? 'Ungrouped');
+				if (!collapsedGroups.has(key)) {
+					setSelectedIndex(i);
+					return;
+				}
+			}
+			// Wrap: find first visible item from start
+			for (let i = 0; i < selectedIndex; i++) {
+				const item = items[i];
+				const key = sortMode === 'byAgent'
+					? item.sessionName
+					: (item.groupName ?? 'Ungrouped');
+				if (!collapsedGroups.has(key)) {
+					setSelectedIndex(i);
+					return;
+				}
+			}
+		}
+	}, [collapsedGroups, items, selectedIndex, sortMode, setSelectedIndex]);
+
 	// Ref to the virtualized list
 	const listRef = useRef<ListImperativeAPI | null>(null);
 	const headerRef = useRef<HTMLDivElement>(null);
-
-	// Focus the container on mount for keyboard nav
-	useEffect(() => {
-		containerRef.current?.focus();
-	}, [containerRef]);
 
 	const handleNavigate = useCallback(
 		(item: InboxItem) => {
@@ -582,7 +629,11 @@ export default function InboxListView({
 	);
 
 	// useListNavigation handles ArrowUp/Down, Enter, and Cmd/Ctrl+1-9 hotkeys
-	const { selectedIndex: hookSelectedIndex, setSelectedIndex: hookSetSelectedIndex, handleKeyDown: listHandleKeyDown } = useListNavigation({
+	const {
+		selectedIndex: hookSelectedIndex,
+		setSelectedIndex: hookSetSelectedIndex,
+		handleKeyDown: listHandleKeyDown,
+	} = useListNavigation({
 		listLength: items.length,
 		onSelect: (index: number) => {
 			if (items[index]) handleNavigate(items[index]);
@@ -674,16 +725,33 @@ export default function InboxListView({
 				return;
 			}
 
+			// T to toggle group collapse (only in grouped/byAgent sort modes)
+			if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+				if (sortMode === 'grouped' || sortMode === 'byAgent') {
+					e.preventDefault();
+					const selectedItem = items[selectedIndex];
+					if (selectedItem) {
+						const groupKey = sortMode === 'byAgent'
+							? selectedItem.sessionName
+							: (selectedItem.groupName ?? 'Ungrouped');
+						toggleGroup(groupKey);
+					}
+				}
+				return;
+			}
+
 			// Delegate to useListNavigation for arrows, Enter, Cmd/Ctrl+1-9
 			listHandleKeyDown(e);
 		},
-		[getHeaderFocusables, listHandleKeyDown, containerRef]
+		[getHeaderFocusables, listHandleKeyDown, containerRef, sortMode, items, selectedIndex, toggleGroup]
 	);
 
 	// Expose keyboard handler to shell via ref
 	useEffect(() => {
 		if (keyDownRef) keyDownRef.current = handleKeyDown;
-		return () => { if (keyDownRef) keyDownRef.current = null; };
+		return () => {
+			if (keyDownRef) keyDownRef.current = null;
+		};
 	}, [keyDownRef, handleKeyDown]);
 
 	// Row height getter for variable-size rows
@@ -714,7 +782,10 @@ export default function InboxListView({
 	const listHeight = useMemo(() => {
 		if (typeof window === 'undefined') return 400;
 		if (isExpanded) {
-			return Math.min(window.innerHeight * 0.85 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80, 1000);
+			return Math.min(
+				window.innerHeight * 0.85 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80,
+				1000
+			);
 		}
 		return Math.min(window.innerHeight * 0.8 - MODAL_HEADER_HEIGHT - MODAL_FOOTER_HEIGHT - 80, 700);
 	}, [isExpanded]);
@@ -729,6 +800,7 @@ export default function InboxListView({
 				className="px-4 border-b"
 				style={{
 					height: MODAL_HEADER_HEIGHT,
+					backgroundColor: theme.colors.bgSidebar,
 					borderColor: theme.colors.border,
 					display: 'flex',
 					flexDirection: 'column',
@@ -786,7 +858,9 @@ export default function InboxListView({
 							onClick={() => onToggleExpanded((prev) => !prev)}
 							className="p-1.5 rounded"
 							style={{ color: theme.colors.textDim }}
-							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)}
+							onMouseEnter={(e) =>
+								(e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
+							}
 							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
 							title={isExpanded ? 'Collapse' : 'Expand'}
 							aria-label={isExpanded ? 'Collapse modal' : 'Expand modal'}
@@ -889,7 +963,7 @@ export default function InboxListView({
 				}}
 			>
 				<span>{actionCount} items</span>
-				<span>{`↑↓ navigate • F focus • Enter open • ${formatShortcutKeys(['Meta'])}1-9 quick select • Esc close`}</span>
+				<span>{`↑↓ navigate • ${(sortMode === 'grouped' || sortMode === 'byAgent') ? 'T collapse • ' : ''}F focus • Enter open • ${formatShortcutKeys(['Meta'])}1-9 quick select • Esc close`}</span>
 			</div>
 		</>
 	);

@@ -2,7 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import InboxListView from './InboxListView';
 import FocusModeView from './FocusModeView';
 import type { Theme, Session, Group } from '../../types';
-import type { InboxItem, InboxViewMode, InboxFilterMode, InboxSortMode } from '../../types/agent-inbox';
+import type {
+	InboxItem,
+	InboxViewMode,
+	InboxFilterMode,
+	InboxSortMode,
+} from '../../types/agent-inbox';
 import { useModalLayer } from '../../hooks/ui/useModalLayer';
 import { MODAL_PRIORITIES } from '../../constants/modalPriorities';
 import { useModalStore, selectModalData } from '../../stores/modalStore';
@@ -15,6 +20,7 @@ interface AgentInboxProps {
 	theme: Theme;
 	sessions: Session[];
 	groups: Group[];
+	enterToSendAI?: boolean;
 	onClose: () => void;
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
 	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
@@ -26,6 +32,7 @@ export default function AgentInbox({
 	theme,
 	sessions,
 	groups,
+	enterToSendAI,
 	onClose,
 	onNavigateToSession,
 	onQuickReply,
@@ -79,9 +86,7 @@ export default function AgentInbox({
 
 	const handleEnterFocus = useCallback(
 		(item: InboxItem) => {
-			const idx = items.findIndex(
-				(i) => i.sessionId === item.sessionId && i.tabId === item.tabId
-			);
+			const idx = items.findIndex((i) => i.sessionId === item.sessionId && i.tabId === item.tabId);
 			setFocusIndex(idx >= 0 ? idx : 0);
 			setViewMode('focus');
 		},
@@ -106,16 +111,26 @@ export default function AgentInbox({
 	// ---- Container ref for keyboard focus ----
 	const containerRef = useRef<HTMLDivElement>(null);
 
+	// Auto-focus container on mount for immediate keyboard navigation
+	useEffect(() => {
+		const raf = requestAnimationFrame(() => {
+			containerRef.current?.focus();
+		});
+		return () => cancelAnimationFrame(raf);
+	}, []);
+
 	// ---- Expanded state (lifted to shell for dialog width control) ----
 	const [isExpanded, setIsExpanded] = useState(inboxData?.isExpanded ?? false);
 
 	// ---- Compute dialog dimensions (focus mode or expanded → wide) ----
 	const isWide = isExpanded || viewMode === 'focus';
-	const dialogWidth = isWide
-		? Math.min(typeof window !== 'undefined' ? window.innerWidth * 0.9 : 1200, 1200)
-		: 780;
-	const dialogMaxHeight = isWide ? '90vh' : '80vh';
-	const dialogMinHeight = viewMode === 'focus' ? '70vh' : undefined;
+	const expandedWidth = Math.min(
+		typeof window !== 'undefined' ? window.innerWidth * 0.9 : 1200,
+		1200
+	);
+	const dialogWidth = viewMode === 'focus' ? expandedWidth : isWide ? expandedWidth : 780;
+	const dialogHeight = viewMode === 'focus' ? '80vh' : undefined;
+	const dialogMaxHeight = viewMode === 'focus' ? undefined : isWide ? '90vh' : '80vh';
 
 	// ---- Keyboard handler ref from InboxListView ----
 	const listKeyDownRef = useRef<((e: React.KeyboardEvent) => void) | null>(null);
@@ -194,9 +209,9 @@ export default function AgentInbox({
 					borderColor: theme.colors.border,
 					width: dialogWidth,
 					maxWidth: '95vw',
+					height: dialogHeight,
 					maxHeight: dialogMaxHeight,
-					minHeight: dialogMinHeight,
-					transition: 'width 200ms ease, max-height 200ms ease, min-height 200ms ease',
+					transition: 'width 200ms ease, height 200ms ease, max-height 200ms ease',
 				}}
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={handleShellKeyDown}
@@ -227,6 +242,10 @@ export default function AgentInbox({
 							items={items}
 							sessions={sessions}
 							currentIndex={focusIndex}
+							enterToSendAI={enterToSendAI}
+							filterMode={filterMode}
+							setFilterMode={setFilterMode}
+							sortMode={sortMode}
 							onClose={handleClose}
 							onExitFocus={handleExitFocus}
 							onNavigateItem={setFocusIndex}
