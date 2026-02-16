@@ -8,12 +8,13 @@ import {
 	ExternalLink,
 	ChevronLeft,
 	ChevronRight,
+	ChevronDown,
 	Eye,
-	EyeOff,
+	Brain,
 	FileText,
 } from 'lucide-react';
 import type { Theme, Session, LogEntry } from '../../types';
-import type { InboxItem } from '../../types/agent-inbox';
+import type { InboxItem, InboxFilterMode, InboxSortMode } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
 import { resolveContextUsageColor } from './InboxListView';
 import { formatRelativeTime } from '../../utils/formatters';
@@ -61,7 +62,9 @@ function FocusLogEntry({
 						{formatRelativeTime(log.timestamp)}
 					</span>
 				</div>
-				<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}>
+				<div
+					style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}
+				>
 					{log.text}
 				</div>
 			</div>
@@ -70,7 +73,9 @@ function FocusLogEntry({
 
 	// Tool entry — compact badge with status
 	if (isTool) {
-		const toolInput = (log.metadata as any)?.toolState?.input as Record<string, unknown> | undefined;
+		const toolInput = (log.metadata as any)?.toolState?.input as
+			| Record<string, unknown>
+			| undefined;
 		const safeStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
 		const toolDetail = toolInput
 			? safeStr(toolInput.command) ||
@@ -103,10 +108,7 @@ function FocusLogEntry({
 						{log.text}
 					</span>
 					{toolStatus === 'running' && (
-						<span
-							className="animate-pulse shrink-0 pt-0.5"
-							style={{ color: theme.colors.warning }}
-						>
+						<span className="animate-pulse shrink-0 pt-0.5" style={{ color: theme.colors.warning }}>
 							●
 						</span>
 					)}
@@ -139,17 +141,28 @@ function FocusLogEntry({
 					<User className="w-3.5 h-3.5" style={{ color: theme.colors.success }} />
 				</div>
 				<div
-					className="flex-1 rounded-lg px-3 py-2 text-sm"
+					className="flex-1 min-w-0 p-4 pb-10 rounded-xl border rounded-tr-none relative overflow-hidden text-sm"
 					style={{
-						backgroundColor: `${theme.colors.accent}10`,
+						backgroundColor: `color-mix(in srgb, ${theme.colors.accent} 20%, ${theme.colors.bgSidebar})`,
+						borderColor: `${theme.colors.accent}40`,
 						color: theme.colors.textMain,
 						maxWidth: '85%',
 					}}
 				>
-					<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}>
+					<div
+						style={{
+							whiteSpace: 'pre-wrap',
+							wordBreak: 'break-word',
+							fontSize: 13,
+							lineHeight: 1.5,
+						}}
+					>
 						{log.text}
 					</div>
-					<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
+					<div
+						className="absolute bottom-2 right-3 text-xs"
+						style={{ color: theme.colors.textDim, opacity: 0.7 }}
+					>
 						{formatRelativeTime(log.timestamp)}
 					</div>
 				</div>
@@ -172,11 +185,11 @@ function FocusLogEntry({
 					<Bot className="w-3.5 h-3.5" style={{ color: theme.colors.accent }} />
 				</div>
 				<div
-					className="flex-1 rounded-lg px-3 py-2 text-sm"
+					className="flex-1 min-w-0 p-4 pb-10 rounded-xl border rounded-tl-none relative overflow-hidden text-sm"
 					style={{
-						backgroundColor: `${theme.colors.bgActivity}80`,
+						backgroundColor: theme.colors.bgActivity,
+						borderColor: theme.colors.border,
 						color: theme.colors.textMain,
-						maxWidth: '85%',
 					}}
 				>
 					{/* Raw/rendered toggle */}
@@ -187,23 +200,33 @@ function FocusLogEntry({
 							style={{ color: showRawMarkdown ? theme.colors.accent : theme.colors.textDim }}
 							title={showRawMarkdown ? 'Show formatted' : 'Show plain text'}
 						>
-							{showRawMarkdown ? <Eye className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+							{showRawMarkdown ? (
+								<Eye className="w-3.5 h-3.5" />
+							) : (
+								<FileText className="w-3.5 h-3.5" />
+							)}
 						</button>
 					</div>
 
 					{showRawMarkdown ? (
-						<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}>
+						<div
+							style={{
+								whiteSpace: 'pre-wrap',
+								wordBreak: 'break-word',
+								fontSize: 13,
+								lineHeight: 1.5,
+							}}
+						>
 							{log.text}
 						</div>
 					) : (
-						<MarkdownRenderer
-							content={log.text}
-							theme={theme}
-							onCopy={handleCopy}
-						/>
+						<MarkdownRenderer content={log.text} theme={theme} onCopy={handleCopy} />
 					)}
 
-					<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
+					<div
+						className="absolute bottom-2 right-3 text-xs"
+						style={{ color: theme.colors.textDim, opacity: 0.7 }}
+					>
 						{formatRelativeTime(log.timestamp)}
 					</div>
 				</div>
@@ -221,6 +244,10 @@ interface FocusModeViewProps {
 	items: InboxItem[]; // Full filtered+sorted list for prev/next
 	sessions: Session[]; // For accessing AITab.logs
 	currentIndex: number; // Position of item in items[]
+	enterToSendAI?: boolean; // false = Cmd+Enter sends, true = Enter sends
+	filterMode?: InboxFilterMode;
+	setFilterMode?: (mode: InboxFilterMode) => void;
+	sortMode?: InboxSortMode;
 	onClose: () => void; // Close the entire modal
 	onExitFocus: () => void; // Return to list view
 	onNavigateItem: (index: number) => void; // Jump to item at index
@@ -244,98 +271,237 @@ function resolveStatusColor(state: InboxItem['state'], theme: Theme): string {
 }
 
 // ============================================================================
-// FocusSidebar — condensed navigable list of inbox items
+// Compact filter control for sidebar
+// ============================================================================
+const FILTER_OPTIONS: { value: InboxFilterMode; label: string }[] = [
+	{ value: 'all', label: 'All' },
+	{ value: 'unread', label: 'Unread' },
+	{ value: 'starred', label: '★' },
+];
+
+function SidebarFilter({
+	value,
+	onChange,
+	theme,
+}: {
+	value: InboxFilterMode;
+	onChange: (v: InboxFilterMode) => void;
+	theme: Theme;
+}) {
+	return (
+		<div
+			className="flex"
+			style={{
+				borderRadius: 6,
+				border: `1px solid ${theme.colors.border}`,
+				overflow: 'hidden',
+			}}
+		>
+			{FILTER_OPTIONS.map((opt) => (
+				<button
+					key={opt.value}
+					onClick={() => onChange(opt.value)}
+					style={{
+						padding: '2px 8px',
+						fontSize: 10,
+						border: 'none',
+						cursor: 'pointer',
+						transition: 'background 150ms',
+						backgroundColor: value === opt.value ? theme.colors.accent : 'transparent',
+						color: value === opt.value ? theme.colors.accentForeground : theme.colors.textDim,
+						outline: 'none',
+					}}
+				>
+					{opt.label}
+				</button>
+			))}
+		</div>
+	);
+}
+
+// ============================================================================
+// FocusSidebar — condensed navigable list of inbox items with agent grouping
 // ============================================================================
 function FocusSidebar({
 	items,
 	currentIndex,
 	theme,
+	sortMode,
+	filterMode,
+	setFilterMode,
 	onNavigateItem,
 }: {
 	items: InboxItem[];
 	currentIndex: number;
 	theme: Theme;
+	sortMode?: InboxSortMode;
+	filterMode?: InboxFilterMode;
+	setFilterMode?: (mode: InboxFilterMode) => void;
 	onNavigateItem: (index: number) => void;
 }) {
 	const currentRowRef = useRef<HTMLDivElement>(null);
+	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
 	// Auto-scroll to keep the current item visible
 	useEffect(() => {
 		currentRowRef.current?.scrollIntoView({ block: 'nearest' });
 	}, [currentIndex]);
 
-	return (
-		<div className="flex flex-col py-1">
-			{items.map((itm, idx) => {
-				const isCurrent = idx === currentIndex;
-				const statusColor = resolveStatusColor(itm.state, theme);
+	// Build grouped rows when sort mode is byAgent or grouped
+	const rows = useMemo(() => {
+		const effectiveSort = sortMode ?? 'newest';
+		if (effectiveSort !== 'grouped' && effectiveSort !== 'byAgent') {
+			// Group by agent name by default in focus sidebar for better readability
+			const result: (
+				| { type: 'header'; groupName: string }
+				| { type: 'item'; item: InboxItem; index: number }
+			)[] = [];
+			let lastAgent: string | null = null;
+			items.forEach((itm, idx) => {
+				if (itm.sessionName !== lastAgent) {
+					result.push({ type: 'header', groupName: itm.sessionName });
+					lastAgent = itm.sessionName;
+				}
+				result.push({ type: 'item', item: itm, index: idx });
+			});
+			return result;
+		}
+		// Use the sort mode's grouping logic
+		const result: (
+			| { type: 'header'; groupName: string }
+			| { type: 'item'; item: InboxItem; index: number }
+		)[] = [];
+		let lastGroup: string | null = null;
+		items.forEach((itm, idx) => {
+			const groupKey =
+				effectiveSort === 'byAgent' ? itm.sessionName : (itm.groupName ?? 'Ungrouped');
+			if (groupKey !== lastGroup) {
+				result.push({ type: 'header', groupName: groupKey });
+				lastGroup = groupKey;
+			}
+			result.push({ type: 'item', item: itm, index: idx });
+		});
+		return result;
+	}, [items, sortMode]);
 
-				return (
-					<div
-						key={`${itm.sessionId}-${itm.tabId}`}
-						ref={isCurrent ? currentRowRef : undefined}
-						onClick={() => onNavigateItem(idx)}
-						className="flex items-center gap-2 px-3 cursor-pointer transition-colors"
-						style={{
-							height: 40,
-							backgroundColor: isCurrent ? `${theme.colors.accent}15` : 'transparent',
-							borderLeft: isCurrent ? `2px solid ${theme.colors.accent}` : '2px solid transparent',
-						}}
-						onMouseEnter={(e) => {
-							if (!isCurrent) e.currentTarget.style.backgroundColor = `${theme.colors.accent}08`;
-						}}
-						onMouseLeave={(e) => {
-							if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
-						}}
-					>
-						{/* Status dot */}
-						<span
-							className="flex-shrink-0"
+	return (
+		<div className="flex flex-col">
+			{/* Filter control header */}
+			{filterMode !== undefined && setFilterMode && (
+				<div
+					className="flex items-center justify-center px-2 py-2 border-b"
+					style={{ borderColor: theme.colors.border }}
+				>
+					<SidebarFilter value={filterMode} onChange={setFilterMode} theme={theme} />
+				</div>
+			)}
+			{/* Item list */}
+			<div className="flex-1 overflow-y-auto py-1">
+				{(() => {
+					let activeGroup: string | null = null;
+					return rows.map((row, rowIdx) => {
+					if (row.type === 'header') {
+						activeGroup = row.groupName;
+						return (
+							<div
+								key={`header-${row.groupName}-${rowIdx}`}
+								onClick={() => {
+									setCollapsedGroups(prev => {
+										const next = new Set(prev);
+										if (next.has(row.groupName)) next.delete(row.groupName);
+										else next.add(row.groupName);
+										return next;
+									});
+								}}
+								className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider cursor-pointer"
+								style={{
+									color: theme.colors.textDim,
+									fontWeight: 600,
+									backgroundColor: theme.colors.bgSidebar,
+								}}
+							>
+								{collapsedGroups.has(row.groupName)
+									? <ChevronRight className="w-3 h-3" />
+									: <ChevronDown className="w-3 h-3" />
+								}
+								{row.groupName}
+								<span style={{ color: theme.colors.textDim, opacity: 0.5, marginLeft: 'auto' }}>
+									{items.filter(i => i.sessionName === row.groupName).length}
+								</span>
+							</div>
+						);
+					}
+
+					// Skip items in collapsed groups
+					if (activeGroup && collapsedGroups.has(activeGroup)) return null;
+
+					const itm = row.item;
+					const idx = row.index;
+					const isCurrent = idx === currentIndex;
+					const statusColor = resolveStatusColor(itm.state, theme);
+
+					return (
+						<div
+							key={`${itm.sessionId}-${itm.tabId}`}
+							ref={isCurrent ? currentRowRef : undefined}
+							onClick={() => onNavigateItem(idx)}
+							className="flex items-center gap-2 px-3 cursor-pointer transition-colors"
 							style={{
-								width: 6,
-								height: 6,
-								borderRadius: '50%',
-								backgroundColor: statusColor,
+								height: 36,
+								backgroundColor: isCurrent ? `${theme.colors.accent}15` : 'transparent',
+								borderLeft: isCurrent
+									? `2px solid ${theme.colors.accent}`
+									: '2px solid transparent',
 							}}
-						/>
-						{/* Agent name · tab */}
-						<span
-							className="flex-1 text-xs truncate"
-							style={{
-								color: isCurrent ? theme.colors.textMain : theme.colors.textDim,
-								fontWeight: isCurrent ? 600 : 400,
+							onMouseEnter={(e) => {
+								if (!isCurrent) e.currentTarget.style.backgroundColor = `${theme.colors.accent}08`;
+							}}
+							onMouseLeave={(e) => {
+								if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
 							}}
 						>
-							{itm.sessionName}
-							{itm.tabName && (
-								<span style={{ color: theme.colors.textDim, fontWeight: 400 }}> · {itm.tabName}</span>
-							)}
-						</span>
-						{/* Indicators: starred + unread */}
-						{itm.starred && (
-							<span className="flex-shrink-0 text-xs" style={{ color: theme.colors.warning }}>★</span>
-						)}
-						{itm.hasUnread && (
+							{/* Status dot */}
 							<span
 								className="flex-shrink-0"
 								style={{
 									width: 6,
 									height: 6,
 									borderRadius: '50%',
-									backgroundColor: theme.colors.accent,
+									backgroundColor: statusColor,
 								}}
 							/>
-						)}
-						{/* Timestamp */}
-						<span
-							className="flex-shrink-0 text-xs"
-							style={{ color: theme.colors.textDim, opacity: 0.7, fontSize: 10 }}
-						>
-							{formatRelativeTime(itm.timestamp)}
-						</span>
-					</div>
-				);
-			})}
+							{/* Tab name or session snippet */}
+							<span
+								className="flex-1 text-xs truncate"
+								style={{
+									color: isCurrent ? theme.colors.textMain : theme.colors.textDim,
+									fontWeight: isCurrent ? 600 : 400,
+								}}
+							>
+								{itm.tabName || 'Tab'}
+							</span>
+							{/* Indicators: starred + unread */}
+							{itm.starred && (
+								<span className="flex-shrink-0 text-xs" style={{ color: theme.colors.warning }}>
+									★
+								</span>
+							)}
+							{itm.hasUnread && (
+								<span
+									className="flex-shrink-0"
+									style={{
+										width: 6,
+										height: 6,
+										borderRadius: '50%',
+										backgroundColor: theme.colors.accent,
+									}}
+								/>
+							)}
+						</div>
+					);
+				});
+				})()}
+			</div>
 		</div>
 	);
 }
@@ -346,6 +512,10 @@ export default function FocusModeView({
 	items,
 	sessions,
 	currentIndex,
+	enterToSendAI,
+	filterMode,
+	setFilterMode,
+	sortMode,
 	onClose,
 	onExitFocus,
 	onNavigateItem,
@@ -498,15 +668,20 @@ export default function FocusModeView({
 				>
 					{item.groupName && (
 						<>
-							<span className="text-xs" style={{
-								color: theme.colors.textDim,
-								whiteSpace: 'nowrap',
-								textTransform: 'uppercase',
-								letterSpacing: '0.5px',
-							}}>
+							<span
+								className="text-xs"
+								style={{
+									color: theme.colors.textDim,
+									whiteSpace: 'nowrap',
+									textTransform: 'uppercase',
+									letterSpacing: '0.5px',
+								}}
+							>
 								{item.groupName}
 							</span>
-							<span className="text-xs" style={{ color: theme.colors.textDim, padding: '0 4px' }}>|</span>
+							<span className="text-xs" style={{ color: theme.colors.textDim, padding: '0 4px' }}>
+								|
+							</span>
 						</>
 					)}
 					<span
@@ -522,7 +697,9 @@ export default function FocusModeView({
 					</span>
 					{item.tabName && (
 						<>
-							<span className="text-xs" style={{ color: theme.colors.textDim }}>·</span>
+							<span className="text-xs" style={{ color: theme.colors.textDim }}>
+								·
+							</span>
 							<span
 								className="text-xs"
 								style={{
@@ -589,19 +766,19 @@ export default function FocusModeView({
 				>
 					{STATUS_LABELS[item.state]}
 				</span>
-				{/* Thinking toggle */}
+				{/* Thinking toggle pill */}
 				<button
 					onClick={() => setShowThinking((v) => !v)}
-					className="p-1 rounded transition-colors"
+					className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full cursor-pointer transition-colors"
 					style={{
+						backgroundColor: showThinking ? `${theme.colors.accent}20` : 'transparent',
 						color: showThinking ? theme.colors.accent : theme.colors.textDim,
-						backgroundColor: 'transparent',
-						border: 'none',
-						cursor: 'pointer',
+						border: `1px solid ${showThinking ? theme.colors.accent + '40' : theme.colors.border}`,
 					}}
 					title={showThinking ? 'Hide thinking & tools' : 'Show thinking & tools'}
 				>
-					{showThinking ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+					<Brain className="w-3 h-3" />
+					Thinking
 				</button>
 			</div>
 
@@ -621,6 +798,9 @@ export default function FocusModeView({
 						items={items}
 						currentIndex={currentIndex}
 						theme={theme}
+						sortMode={sortMode}
+						filterMode={filterMode}
+						setFilterMode={setFilterMode}
 						onNavigateItem={onNavigateItem}
 					/>
 				</div>
@@ -672,7 +852,7 @@ export default function FocusModeView({
 
 					{/* Reply input bar */}
 					<div
-						className="flex items-end gap-2 px-4 py-2 border-t"
+						className="flex items-center gap-2 px-4 py-2 border-t"
 						style={{ borderColor: theme.colors.border }}
 					>
 						<textarea
@@ -680,12 +860,28 @@ export default function FocusModeView({
 							value={replyText}
 							onChange={(e) => setReplyText(e.target.value)}
 							onKeyDown={(e) => {
-								if (e.key === 'Enter' && !e.shiftKey && !e.metaKey) {
-									e.preventDefault();
-									handleQuickReply();
-								} else if (e.key === 'Enter' && e.shiftKey) {
-									e.preventDefault();
-									handleOpenAndReply();
+								if (e.key === 'Enter') {
+									if (enterToSendAI) {
+										// Enter sends, Shift+Enter = Open & Reply
+										if (!e.shiftKey && !e.metaKey) {
+											e.preventDefault();
+											handleQuickReply();
+										} else if (e.shiftKey && !e.metaKey) {
+											e.preventDefault();
+											handleOpenAndReply();
+										}
+									} else {
+										// Cmd+Enter sends, Shift+Enter = Open & Reply
+										if (e.metaKey && !e.shiftKey) {
+											e.preventDefault();
+											handleQuickReply();
+										} else if (e.shiftKey && !e.metaKey) {
+											e.preventDefault();
+											handleOpenAndReply();
+										}
+									}
+									e.stopPropagation();
+									return;
 								}
 								// CRITICAL: Prevent focus-mode keyboard shortcuts from firing while typing
 								e.stopPropagation();
@@ -714,11 +910,13 @@ export default function FocusModeView({
 							disabled={!replyText.trim()}
 							className="p-2 rounded-lg transition-colors flex-shrink-0"
 							style={{
-								backgroundColor: replyText.trim() ? theme.colors.accent : `${theme.colors.accent}30`,
+								backgroundColor: replyText.trim()
+									? theme.colors.accent
+									: `${theme.colors.accent}30`,
 								color: replyText.trim() ? theme.colors.accentForeground : theme.colors.textDim,
 								cursor: replyText.trim() ? 'pointer' : 'default',
 							}}
-							title="Quick reply (Enter)"
+							title={enterToSendAI ? 'Quick reply (Enter)' : 'Quick reply (⌘Enter)'}
 						>
 							<ArrowUp className="w-4 h-4" />
 						</button>

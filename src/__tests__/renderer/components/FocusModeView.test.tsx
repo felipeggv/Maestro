@@ -13,37 +13,69 @@ import type { InboxItem } from '../../../renderer/types/agent-inbox';
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
 	ArrowLeft: ({ style }: { style?: React.CSSProperties }) => (
-		<span data-testid="arrow-left-icon" style={style}>←</span>
+		<span data-testid="arrow-left-icon" style={style}>
+			←
+		</span>
 	),
 	X: ({ className }: { className?: string }) => (
-		<span data-testid="x-icon" className={className}>×</span>
+		<span data-testid="x-icon" className={className}>
+			×
+		</span>
 	),
 	Bot: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-		<span data-testid="bot-icon" className={className} style={style}>🤖</span>
+		<span data-testid="bot-icon" className={className} style={style}>
+			🤖
+		</span>
 	),
 	User: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
-		<span data-testid="user-icon" className={className} style={style}>👤</span>
+		<span data-testid="user-icon" className={className} style={style}>
+			👤
+		</span>
 	),
 	ArrowUp: ({ className }: { className?: string }) => (
-		<span data-testid="arrow-up-icon" className={className}>↑</span>
+		<span data-testid="arrow-up-icon" className={className}>
+			↑
+		</span>
 	),
 	ExternalLink: ({ className }: { className?: string }) => (
-		<span data-testid="external-link-icon" className={className}>↗</span>
+		<span data-testid="external-link-icon" className={className}>
+			↗
+		</span>
 	),
 	ChevronLeft: ({ className }: { className?: string }) => (
-		<span data-testid="chevron-left-icon" className={className}>‹</span>
+		<span data-testid="chevron-left-icon" className={className}>
+			‹
+		</span>
 	),
 	ChevronRight: ({ className }: { className?: string }) => (
-		<span data-testid="chevron-right-icon" className={className}>›</span>
+		<span data-testid="chevron-right-icon" className={className}>
+			›
+		</span>
+	),
+	ChevronDown: ({ className }: { className?: string }) => (
+		<span data-testid="chevron-down-icon" className={className}>
+			▼
+		</span>
 	),
 	Eye: ({ className }: { className?: string }) => (
-		<span data-testid="eye-icon" className={className}>👁</span>
+		<span data-testid="eye-icon" className={className}>
+			👁
+		</span>
 	),
 	EyeOff: ({ className }: { className?: string }) => (
-		<span data-testid="eye-off-icon" className={className}>🚫</span>
+		<span data-testid="eye-off-icon" className={className}>
+			🚫
+		</span>
+	),
+	Brain: ({ className }: { className?: string }) => (
+		<span data-testid="brain-icon" className={className}>
+			🧠
+		</span>
 	),
 	FileText: ({ className }: { className?: string }) => (
-		<span data-testid="file-text-icon" className={className}>📄</span>
+		<span data-testid="file-text-icon" className={className}>
+			📄
+		</span>
 	),
 }));
 
@@ -108,18 +140,20 @@ function createSession(sessionId: string, tabId: string, logs: any[] = []): Sess
 	} as unknown as Session;
 }
 
-function renderFocusView(overrides: {
-	items?: InboxItem[];
-	currentIndex?: number;
-	sessions?: Session[];
-	onClose?: ReturnType<typeof vi.fn>;
-	onExitFocus?: ReturnType<typeof vi.fn>;
-	onQuickReply?: ReturnType<typeof vi.fn>;
-	onOpenAndReply?: ReturnType<typeof vi.fn>;
-	onMarkAsRead?: ReturnType<typeof vi.fn>;
-	onNavigateItem?: ReturnType<typeof vi.fn>;
-	onNavigateToSession?: ReturnType<typeof vi.fn>;
-} = {}) {
+function renderFocusView(
+	overrides: {
+		items?: InboxItem[];
+		currentIndex?: number;
+		sessions?: Session[];
+		onClose?: ReturnType<typeof vi.fn>;
+		onExitFocus?: ReturnType<typeof vi.fn>;
+		onQuickReply?: ReturnType<typeof vi.fn>;
+		onOpenAndReply?: ReturnType<typeof vi.fn>;
+		onMarkAsRead?: ReturnType<typeof vi.fn>;
+		onNavigateItem?: ReturnType<typeof vi.fn>;
+		onNavigateToSession?: ReturnType<typeof vi.fn>;
+	} = {}
+) {
 	const item = createItem();
 	const items = overrides.items ?? [item];
 	const currentIndex = overrides.currentIndex ?? 0;
@@ -247,9 +281,7 @@ describe('FocusModeView (conversation)', () => {
 	});
 
 	it('7b. renders stdout logs as AI messages', () => {
-		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'stdout', text: 'Stdout AI output' },
-		];
+		const logs = [{ id: 'l1', timestamp: 1000, source: 'stdout', text: 'Stdout AI output' }];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
@@ -306,9 +338,7 @@ describe('FocusModeView (conversation)', () => {
 
 	it('10. renders long AI text fully via MarkdownRenderer (no truncation)', () => {
 		const longText = 'A'.repeat(600);
-		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'ai', text: longText },
-		];
+		const logs = [{ id: 'l1', timestamp: 1000, source: 'ai', text: longText }];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
@@ -320,9 +350,7 @@ describe('FocusModeView (conversation)', () => {
 	});
 
 	it('11. shows Bot icon for AI messages', () => {
-		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'ai', text: 'AI message' },
-		];
+		const logs = [{ id: 'l1', timestamp: 1000, source: 'ai', text: 'AI message' }];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
@@ -331,9 +359,7 @@ describe('FocusModeView (conversation)', () => {
 	});
 
 	it('12. shows User icon for user messages', () => {
-		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'user', text: 'User message' },
-		];
+		const logs = [{ id: 'l1', timestamp: 1000, source: 'user', text: 'User message' }];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
@@ -342,9 +368,7 @@ describe('FocusModeView (conversation)', () => {
 	});
 
 	it('12b. thinking entry renders with "thinking" badge', () => {
-		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'thinking', text: 'Deep thought...' },
-		];
+		const logs = [{ id: 'l1', timestamp: 1000, source: 'thinking', text: 'Deep thought...' }];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
@@ -359,7 +383,13 @@ describe('FocusModeView (conversation)', () => {
 
 	it('12c. tool entry renders with tool name badge', () => {
 		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'tool', text: 'Read', metadata: { toolState: { status: 'completed', input: { file_path: '/src/index.ts' } } } },
+			{
+				id: 'l1',
+				timestamp: 1000,
+				source: 'tool',
+				text: 'Read',
+				metadata: { toolState: { status: 'completed', input: { file_path: '/src/index.ts' } } },
+			},
 		];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
@@ -375,9 +405,7 @@ describe('FocusModeView (conversation)', () => {
 	});
 
 	it('12d. AI message renders via MarkdownRenderer', () => {
-		const logs = [
-			{ id: 'l1', timestamp: 1000, source: 'stdout', text: '**bold** text' },
-		];
+		const logs = [{ id: 'l1', timestamp: 1000, source: 'stdout', text: '**bold** text' }];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
@@ -417,17 +445,18 @@ describe('FocusModeView (reply)', () => {
 
 	it('14. quick reply button disabled when empty', () => {
 		renderFocusView();
-		const sendButton = screen.getByTitle('Quick reply (Enter)');
+		// Default enterToSendAI=undefined → Cmd+Enter mode
+		const sendButton = screen.getByTitle('Quick reply (⌘Enter)');
 		expect(sendButton.closest('button')?.disabled).toBe(true);
 	});
 
-	it('15. calls onQuickReply on Enter', () => {
+	it('15. calls onQuickReply on Cmd+Enter (default mode)', () => {
 		const onQuickReply = vi.fn();
 		renderFocusView({ onQuickReply });
 
 		const textarea = screen.getByPlaceholderText('Reply to agent...');
 		fireEvent.change(textarea, { target: { value: 'hello' } });
-		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: false });
+		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: true });
 
 		expect(onQuickReply).toHaveBeenCalledWith('session-1', 'tab-1', 'hello');
 	});
@@ -449,7 +478,7 @@ describe('FocusModeView (reply)', () => {
 
 		const textarea = screen.getByPlaceholderText('Reply to agent...') as HTMLTextAreaElement;
 		fireEvent.change(textarea, { target: { value: 'hello' } });
-		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: false });
+		fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false, metaKey: true });
 
 		expect(textarea.value).toBe('');
 	});
@@ -707,16 +736,20 @@ describe('FocusModeView (sidebar)', () => {
 		const onNavigateItem = vi.fn();
 		renderFocusView({
 			items: [
-				createItem({ sessionId: 's1', tabId: 't1', sessionName: 'Agent A' }),
-				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent B' }),
+				createItem({ sessionId: 's1', tabId: 't1', sessionName: 'Agent A', tabName: 'Tab A' }),
+				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent B', tabName: 'Tab B' }),
 			],
 			currentIndex: 0,
 			onNavigateItem,
 		});
-		// Agent B appears in sidebar; breadcrumb shows Agent A (current)
-		// Use getAllByText and click the sidebar one
-		const agentBElements = screen.getAllByText('Agent B');
-		fireEvent.click(agentBElements[0]);
+		// Sidebar groups by agent, items show tabName
+		// Click the second item (Tab B) in the sidebar
+		const sidebar = screen.getByTestId('focus-sidebar');
+		const tabBElement = Array.from(sidebar.querySelectorAll('[class*="cursor-pointer"]')).find(
+			(el) => el.textContent?.includes('Tab B')
+		);
+		expect(tabBElement).toBeTruthy();
+		fireEvent.click(tabBElement!);
 		expect(onNavigateItem).toHaveBeenCalledWith(1);
 	});
 
@@ -743,10 +776,7 @@ describe('FocusModeView (sidebar)', () => {
 				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Read Agent', hasUnread: false }),
 			],
 			currentIndex: 1,
-			sessions: [
-				createSession('s1', 't1'),
-				createSession('s2', 't2'),
-			],
+			sessions: [createSession('s1', 't1'), createSession('s2', 't2')],
 		});
 		// The sidebar should render — verify its presence
 		expect(screen.getByTestId('focus-sidebar')).toBeDefined();
