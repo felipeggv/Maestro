@@ -243,6 +243,103 @@ function resolveStatusColor(state: InboxItem['state'], theme: Theme): string {
 	return colorMap[colorKey] ?? theme.colors.textDim;
 }
 
+// ============================================================================
+// FocusSidebar — condensed navigable list of inbox items
+// ============================================================================
+function FocusSidebar({
+	items,
+	currentIndex,
+	theme,
+	onNavigateItem,
+}: {
+	items: InboxItem[];
+	currentIndex: number;
+	theme: Theme;
+	onNavigateItem: (index: number) => void;
+}) {
+	const currentRowRef = useRef<HTMLDivElement>(null);
+
+	// Auto-scroll to keep the current item visible
+	useEffect(() => {
+		currentRowRef.current?.scrollIntoView({ block: 'nearest' });
+	}, [currentIndex]);
+
+	return (
+		<div className="flex flex-col py-1">
+			{items.map((itm, idx) => {
+				const isCurrent = idx === currentIndex;
+				const statusColor = resolveStatusColor(itm.state, theme);
+
+				return (
+					<div
+						key={`${itm.sessionId}-${itm.tabId}`}
+						ref={isCurrent ? currentRowRef : undefined}
+						onClick={() => onNavigateItem(idx)}
+						className="flex items-center gap-2 px-3 cursor-pointer transition-colors"
+						style={{
+							height: 40,
+							backgroundColor: isCurrent ? `${theme.colors.accent}15` : 'transparent',
+							borderLeft: isCurrent ? `2px solid ${theme.colors.accent}` : '2px solid transparent',
+						}}
+						onMouseEnter={(e) => {
+							if (!isCurrent) e.currentTarget.style.backgroundColor = `${theme.colors.accent}08`;
+						}}
+						onMouseLeave={(e) => {
+							if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
+						}}
+					>
+						{/* Status dot */}
+						<span
+							className="flex-shrink-0"
+							style={{
+								width: 6,
+								height: 6,
+								borderRadius: '50%',
+								backgroundColor: statusColor,
+							}}
+						/>
+						{/* Agent name · tab */}
+						<span
+							className="flex-1 text-xs truncate"
+							style={{
+								color: isCurrent ? theme.colors.textMain : theme.colors.textDim,
+								fontWeight: isCurrent ? 600 : 400,
+							}}
+						>
+							{itm.sessionName}
+							{itm.tabName && (
+								<span style={{ color: theme.colors.textDim, fontWeight: 400 }}> · {itm.tabName}</span>
+							)}
+						</span>
+						{/* Indicators: starred + unread */}
+						{itm.starred && (
+							<span className="flex-shrink-0 text-xs" style={{ color: theme.colors.warning }}>★</span>
+						)}
+						{itm.hasUnread && (
+							<span
+								className="flex-shrink-0"
+								style={{
+									width: 6,
+									height: 6,
+									borderRadius: '50%',
+									backgroundColor: theme.colors.accent,
+								}}
+							/>
+						)}
+						{/* Timestamp */}
+						<span
+							className="flex-shrink-0 text-xs"
+							style={{ color: theme.colors.textDim, opacity: 0.7, fontSize: 10 }}
+						>
+							{formatRelativeTime(itm.timestamp)}
+						</span>
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
 export default function FocusModeView({
 	theme,
 	item,
@@ -312,6 +409,14 @@ export default function FocusModeView({
 	// ---- Reply state ----
 	const [replyText, setReplyText] = useState('');
 	const replyInputRef = useRef<HTMLTextAreaElement>(null);
+
+	// Auto-focus reply input when entering focus mode or switching items
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			replyInputRef.current?.focus();
+		}, 200);
+		return () => clearTimeout(timer);
+	}, [item.sessionId, item.tabId]);
 
 	// Reset reply text when item changes (prev/next navigation)
 	useEffect(() => {
@@ -386,11 +491,24 @@ export default function FocusModeView({
 					<span>Inbox</span>
 				</button>
 
-				{/* Center: Agent name + tab */}
+				{/* Center: GROUP | Agent name · tab */}
 				<div
 					className="flex-1 flex items-center justify-center gap-1"
 					style={{ overflow: 'hidden' }}
 				>
+					{item.groupName && (
+						<>
+							<span className="text-xs" style={{
+								color: theme.colors.textDim,
+								whiteSpace: 'nowrap',
+								textTransform: 'uppercase',
+								letterSpacing: '0.5px',
+							}}>
+								{item.groupName}
+							</span>
+							<span className="text-xs" style={{ color: theme.colors.textDim, padding: '0 4px' }}>|</span>
+						</>
+					)}
 					<span
 						className="text-sm font-bold"
 						style={{
@@ -404,9 +522,7 @@ export default function FocusModeView({
 					</span>
 					{item.tabName && (
 						<>
-							<span className="text-xs" style={{ color: theme.colors.textDim }}>
-								·
-							</span>
+							<span className="text-xs" style={{ color: theme.colors.textDim }}>·</span>
 							<span
 								className="text-xs"
 								style={{
@@ -489,117 +605,141 @@ export default function FocusModeView({
 				</button>
 			</div>
 
-			{/* Body — conversation tail */}
-			{!sessionExists ? (
+			{/* Two-column layout: sidebar + main content */}
+			<div className="flex flex-1" style={{ minHeight: 0 }}>
+				{/* Sidebar mini-list */}
 				<div
-					className="flex-1 flex items-center justify-center"
-					style={{ color: theme.colors.textDim }}
-				>
-					<span className="text-sm">Session no longer available</span>
-				</div>
-			) : (
-				<div
-					ref={scrollRef}
-					role="log"
-					aria-label="Agent conversation"
-					className="flex-1 overflow-y-auto px-4 py-3"
+					className="flex-shrink-0 border-r overflow-y-auto"
 					style={{
-						minHeight: 0,
-						opacity: isTransitioning ? 0.3 : 1,
-						transition: 'opacity 150ms ease',
+						width: 220,
+						borderColor: theme.colors.border,
+						backgroundColor: theme.colors.bgSidebar,
 					}}
+					data-testid="focus-sidebar"
 				>
-					{visibleLogs.length === 0 ? (
+					<FocusSidebar
+						items={items}
+						currentIndex={currentIndex}
+						theme={theme}
+						onNavigateItem={onNavigateItem}
+					/>
+				</div>
+
+				{/* Main content: conversation body + reply input */}
+				<div className="flex-1 flex flex-col" style={{ minWidth: 0, minHeight: 0 }}>
+					{/* Body — conversation tail */}
+					{!sessionExists ? (
 						<div
-							className="flex items-center justify-center h-full"
+							className="flex-1 flex items-center justify-center"
 							style={{ color: theme.colors.textDim }}
 						>
-							<span className="text-sm">No conversation yet</span>
+							<span className="text-sm">Session no longer available</span>
 						</div>
 					) : (
-						<div className="flex flex-col gap-3">
-							{visibleLogs.map((log) => (
-								<FocusLogEntry
-									key={log.id}
-									log={log}
-									theme={theme}
-									showRawMarkdown={showRawMarkdown}
-									onToggleRaw={() => setShowRawMarkdown((v) => !v)}
-								/>
-							))}
+						<div
+							ref={scrollRef}
+							role="log"
+							aria-label="Agent conversation"
+							className="flex-1 overflow-y-auto px-4 py-3"
+							style={{
+								minHeight: 0,
+								opacity: isTransitioning ? 0.3 : 1,
+								transition: 'opacity 150ms ease',
+							}}
+						>
+							{visibleLogs.length === 0 ? (
+								<div
+									className="flex items-center justify-center h-full"
+									style={{ color: theme.colors.textDim }}
+								>
+									<span className="text-sm">No conversation yet</span>
+								</div>
+							) : (
+								<div className="flex flex-col gap-3">
+									{visibleLogs.map((log) => (
+										<FocusLogEntry
+											key={log.id}
+											log={log}
+											theme={theme}
+											showRawMarkdown={showRawMarkdown}
+											onToggleRaw={() => setShowRawMarkdown((v) => !v)}
+										/>
+									))}
+								</div>
+							)}
 						</div>
 					)}
-				</div>
-			)}
 
-			{/* Reply input bar */}
-			<div
-				className="flex items-end gap-2 px-4 py-2 border-t"
-				style={{ borderColor: theme.colors.border }}
-			>
-				<textarea
-					ref={replyInputRef}
-					value={replyText}
-					onChange={(e) => setReplyText(e.target.value)}
-					onKeyDown={(e) => {
-						if (e.key === 'Enter' && !e.shiftKey && !e.metaKey) {
-							e.preventDefault();
-							handleQuickReply();
-						} else if (e.key === 'Enter' && e.shiftKey) {
-							e.preventDefault();
-							handleOpenAndReply();
-						}
-						// CRITICAL: Prevent focus-mode keyboard shortcuts from firing while typing
-						e.stopPropagation();
-					}}
-					placeholder="Reply to agent..."
-					rows={1}
-					aria-label="Reply to agent"
-					className="flex-1 resize-none rounded-lg px-3 py-2 text-sm outline-none"
-					style={{
-						backgroundColor: theme.colors.bgActivity,
-						color: theme.colors.textMain,
-						border: `1px solid ${theme.colors.border}`,
-						minHeight: 36,
-						maxHeight: 80,
-					}}
-					onInput={(e) => {
-						// Auto-resize textarea
-						const target = e.target as HTMLTextAreaElement;
-						target.style.height = 'auto';
-						target.style.height = Math.min(target.scrollHeight, 80) + 'px';
-					}}
-				/>
-				{/* Quick Reply button (primary) */}
-				<button
-					onClick={handleQuickReply}
-					disabled={!replyText.trim()}
-					className="p-2 rounded-lg transition-colors flex-shrink-0"
-					style={{
-						backgroundColor: replyText.trim() ? theme.colors.accent : `${theme.colors.accent}30`,
-						color: replyText.trim() ? theme.colors.accentForeground : theme.colors.textDim,
-						cursor: replyText.trim() ? 'pointer' : 'default',
-					}}
-					title="Quick reply (Enter)"
-				>
-					<ArrowUp className="w-4 h-4" />
-				</button>
-				{/* Open & Reply button (secondary) */}
-				<button
-					onClick={handleOpenAndReply}
-					disabled={!replyText.trim()}
-					className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-xs"
-					style={{
-						border: `1px solid ${theme.colors.border}`,
-						color: replyText.trim() ? theme.colors.textMain : theme.colors.textDim,
-						backgroundColor: 'transparent',
-						cursor: replyText.trim() ? 'pointer' : 'default',
-						opacity: replyText.trim() ? 1 : 0.5,
-					}}
-					title="Open session & reply (Shift+Enter)"
-				>
-					<ExternalLink className="w-3.5 h-3.5" />
-				</button>
+					{/* Reply input bar */}
+					<div
+						className="flex items-end gap-2 px-4 py-2 border-t"
+						style={{ borderColor: theme.colors.border }}
+					>
+						<textarea
+							ref={replyInputRef}
+							value={replyText}
+							onChange={(e) => setReplyText(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter' && !e.shiftKey && !e.metaKey) {
+									e.preventDefault();
+									handleQuickReply();
+								} else if (e.key === 'Enter' && e.shiftKey) {
+									e.preventDefault();
+									handleOpenAndReply();
+								}
+								// CRITICAL: Prevent focus-mode keyboard shortcuts from firing while typing
+								e.stopPropagation();
+							}}
+							placeholder="Reply to agent..."
+							rows={1}
+							aria-label="Reply to agent"
+							className="flex-1 resize-none rounded-lg px-3 py-2 text-sm outline-none"
+							style={{
+								backgroundColor: theme.colors.bgActivity,
+								color: theme.colors.textMain,
+								border: `1px solid ${theme.colors.border}`,
+								minHeight: 36,
+								maxHeight: 80,
+							}}
+							onInput={(e) => {
+								// Auto-resize textarea
+								const target = e.target as HTMLTextAreaElement;
+								target.style.height = 'auto';
+								target.style.height = Math.min(target.scrollHeight, 80) + 'px';
+							}}
+						/>
+						{/* Quick Reply button (primary) */}
+						<button
+							onClick={handleQuickReply}
+							disabled={!replyText.trim()}
+							className="p-2 rounded-lg transition-colors flex-shrink-0"
+							style={{
+								backgroundColor: replyText.trim() ? theme.colors.accent : `${theme.colors.accent}30`,
+								color: replyText.trim() ? theme.colors.accentForeground : theme.colors.textDim,
+								cursor: replyText.trim() ? 'pointer' : 'default',
+							}}
+							title="Quick reply (Enter)"
+						>
+							<ArrowUp className="w-4 h-4" />
+						</button>
+						{/* Open & Reply button (secondary) */}
+						<button
+							onClick={handleOpenAndReply}
+							disabled={!replyText.trim()}
+							className="p-1.5 rounded-lg transition-colors flex-shrink-0 text-xs"
+							style={{
+								border: `1px solid ${theme.colors.border}`,
+								color: replyText.trim() ? theme.colors.textMain : theme.colors.textDim,
+								backgroundColor: 'transparent',
+								cursor: replyText.trim() ? 'pointer' : 'default',
+								opacity: replyText.trim() ? 1 : 0.5,
+							}}
+							title="Open session & reply (Shift+Enter)"
+						>
+							<ExternalLink className="w-3.5 h-3.5" />
+						</button>
+					</div>
+				</div>
 			</div>
 
 			{/* Footer — 44px */}

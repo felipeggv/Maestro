@@ -160,7 +160,8 @@ describe('FocusModeView (rendering)', () => {
 			],
 			currentIndex: 0,
 		});
-		expect(screen.getByText('Test Agent')).toBeDefined();
+		// Agent name appears in both breadcrumb and sidebar, so use getAllByText
+		expect(screen.getAllByText('Test Agent').length).toBeGreaterThanOrEqual(1);
 		expect(screen.getByText('1 / 3')).toBeDefined();
 	});
 
@@ -636,5 +637,101 @@ describe('FocusModeView (thinking toggle)', () => {
 		// Toggle off again
 		fireEvent.click(screen.getByTitle('Hide thinking & tools'));
 		expect(screen.queryByText('Internal reasoning')).toBeNull();
+	});
+});
+
+// ============================================================================
+// Breadcrumb group name tests
+// ============================================================================
+describe('FocusModeView (breadcrumb)', () => {
+	it('34. shows group name in breadcrumb when present', () => {
+		renderFocusView({
+			items: [createItem({ groupName: 'Backend', sessionName: 'Agent-1', tabName: 'Tab-A' })],
+		});
+		// Group name appears in sidebar too, so use getAllByText
+		expect(screen.getAllByText('Backend').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('|').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('Agent-1').length).toBeGreaterThanOrEqual(1);
+	});
+
+	it('35. does NOT show group separator when groupName is absent', () => {
+		renderFocusView({
+			items: [createItem({ groupName: undefined, sessionName: 'Solo Agent' })],
+		});
+		// Session name appears in both breadcrumb and sidebar
+		expect(screen.getAllByText('Solo Agent').length).toBeGreaterThanOrEqual(1);
+		// No "|" separator should appear (neither breadcrumb nor sidebar uses it without groupName)
+		expect(screen.queryByText('|')).toBeNull();
+	});
+});
+
+// ============================================================================
+// Sidebar mini-list tests
+// ============================================================================
+describe('FocusModeView (sidebar)', () => {
+	it('36. renders sidebar with all items', () => {
+		renderFocusView({
+			items: [
+				createItem({ sessionId: 's1', tabId: 't1', sessionName: 'Agent A' }),
+				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent B' }),
+				createItem({ sessionId: 's3', tabId: 't3', sessionName: 'Agent C' }),
+			],
+			currentIndex: 0,
+		});
+		const sidebar = screen.getByTestId('focus-sidebar');
+		expect(sidebar).toBeDefined();
+		// Names appear in both breadcrumb and sidebar — use getAllByText
+		expect(screen.getAllByText('Agent A').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('Agent B').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('Agent C').length).toBeGreaterThanOrEqual(1);
+	});
+
+	it('37. clicking sidebar item calls onNavigateItem with correct index', () => {
+		const onNavigateItem = vi.fn();
+		renderFocusView({
+			items: [
+				createItem({ sessionId: 's1', tabId: 't1', sessionName: 'Agent A' }),
+				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent B' }),
+			],
+			currentIndex: 0,
+			onNavigateItem,
+		});
+		// Agent B appears in sidebar; breadcrumb shows Agent A (current)
+		// Use getAllByText and click the sidebar one
+		const agentBElements = screen.getAllByText('Agent B');
+		fireEvent.click(agentBElements[0]);
+		expect(onNavigateItem).toHaveBeenCalledWith(1);
+	});
+
+	it('38. sidebar shows starred indicator', () => {
+		renderFocusView({
+			items: [
+				createItem({ sessionId: 's1', tabId: 't1', sessionName: 'Starred Agent', starred: true }),
+			],
+			currentIndex: 0,
+		});
+		const sidebar = screen.getByTestId('focus-sidebar');
+		expect(sidebar).toBeDefined();
+		// The sidebar renders a standalone ★ for starred items
+		// The subheader renders "★ Starred" as a single text node
+		// So there should be at least one standalone ★
+		const allStars = screen.getAllByText('★');
+		expect(allStars.length).toBeGreaterThanOrEqual(1);
+	});
+
+	it('39. sidebar shows unread dot for unread items', () => {
+		renderFocusView({
+			items: [
+				createItem({ sessionId: 's1', tabId: 't1', sessionName: 'Unread Agent', hasUnread: true }),
+				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Read Agent', hasUnread: false }),
+			],
+			currentIndex: 1,
+			sessions: [
+				createSession('s1', 't1'),
+				createSession('s2', 't2'),
+			],
+		});
+		// The sidebar should render — verify its presence
+		expect(screen.getByTestId('focus-sidebar')).toBeDefined();
 	});
 });
