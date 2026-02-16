@@ -52,6 +52,22 @@ vi.mock('lucide-react', () => ({
 	ChevronLeft: ({ className }: { className?: string }) => (
 		<span data-testid="chevron-left-icon" className={className}>‹</span>
 	),
+	Eye: ({ className }: { className?: string }) => (
+		<span data-testid="eye-icon" className={className}>👁</span>
+	),
+	EyeOff: ({ className }: { className?: string }) => (
+		<span data-testid="eye-off-icon" className={className}>🚫</span>
+	),
+	FileText: ({ className }: { className?: string }) => (
+		<span data-testid="file-text-icon" className={className}>📄</span>
+	),
+}));
+
+// Mock MarkdownRenderer used by FocusModeView
+vi.mock('../../../renderer/components/MarkdownRenderer', () => ({
+	MarkdownRenderer: ({ content }: { content: string }) => (
+		<div data-testid="markdown-renderer">{content}</div>
+	),
 }));
 
 // Mock layer stack context

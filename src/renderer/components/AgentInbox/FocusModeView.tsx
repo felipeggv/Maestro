@@ -1,71 +1,218 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, X, Bot, User, ArrowUp, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+	ArrowLeft,
+	X,
+	Bot,
+	User,
+	ArrowUp,
+	ExternalLink,
+	ChevronLeft,
+	ChevronRight,
+	Eye,
+	EyeOff,
+	FileText,
+} from 'lucide-react';
 import type { Theme, Session, LogEntry } from '../../types';
 import type { InboxItem } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
 import { resolveContextUsageColor } from './InboxListView';
 import { formatRelativeTime } from '../../utils/formatters';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 
-const MAX_LOG_ENTRIES = 20;
-const MAX_LOG_TEXT_LENGTH = 500;
+const MAX_LOG_ENTRIES = 50;
 
-function truncateLogText(text: string): string {
-	if (text.length <= MAX_LOG_TEXT_LENGTH) return text;
-	return text.slice(0, MAX_LOG_TEXT_LENGTH) + '\n… (truncated)';
-}
+function FocusLogEntry({
+	log,
+	theme,
+	showRawMarkdown,
+	onToggleRaw,
+}: {
+	log: LogEntry;
+	theme: Theme;
+	showRawMarkdown: boolean;
+	onToggleRaw: () => void;
+}) {
+	const isUser = log.source === 'user';
+	const isAI = log.source === 'ai' || log.source === 'stdout';
+	const isThinking = log.source === 'thinking';
+	const isTool = log.source === 'tool';
 
-function LogBubble({ log, theme }: { log: LogEntry; theme: Theme }) {
-	const isAI = log.source === 'ai';
-
-	return (
-		<div
-			className="flex gap-2"
-			style={{
-				flexDirection: isAI ? 'row' : 'row-reverse',
-			}}
-		>
-			{/* Source icon */}
+	// Thinking entry — left border accent + badge
+	if (isThinking) {
+		return (
 			<div
-				className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+				className="px-4 py-2 text-sm font-mono border-l-2"
 				style={{
-					backgroundColor: isAI ? `${theme.colors.accent}20` : `${theme.colors.success}20`,
-				}}
-			>
-				{isAI ? (
-					<Bot className="w-3.5 h-3.5" style={{ color: theme.colors.accent }} />
-				) : (
-					<User className="w-3.5 h-3.5" style={{ color: theme.colors.success }} />
-				)}
-			</div>
-
-			{/* Message content */}
-			<div
-				className="flex-1 rounded-lg px-3 py-2 text-sm"
-				style={{
-					backgroundColor: isAI ? `${theme.colors.bgActivity}80` : `${theme.colors.accent}10`,
 					color: theme.colors.textMain,
-					maxWidth: '85%',
+					borderColor: theme.colors.accent,
 				}}
 			>
-				{/* Text content — preserve whitespace for code */}
+				<div className="flex items-center gap-2 mb-1">
+					<span
+						className="text-[10px] px-1.5 py-0.5 rounded"
+						style={{
+							backgroundColor: `${theme.colors.accent}30`,
+							color: theme.colors.accent,
+						}}
+					>
+						thinking
+					</span>
+					<span className="text-xs" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
+						{formatRelativeTime(log.timestamp)}
+					</span>
+				</div>
+				<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}>
+					{log.text}
+				</div>
+			</div>
+		);
+	}
+
+	// Tool entry — compact badge with status
+	if (isTool) {
+		const toolInput = (log.metadata as any)?.toolState?.input as Record<string, unknown> | undefined;
+		const safeStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+		const toolDetail = toolInput
+			? safeStr(toolInput.command) ||
+				safeStr(toolInput.pattern) ||
+				safeStr(toolInput.file_path) ||
+				safeStr(toolInput.query) ||
+				safeStr(toolInput.description) ||
+				safeStr(toolInput.prompt) ||
+				safeStr(toolInput.task_id) ||
+				null
+			: null;
+		const toolStatus = (log.metadata as any)?.toolState?.status as string | undefined;
+
+		return (
+			<div
+				className="px-4 py-1.5 text-xs font-mono border-l-2"
+				style={{
+					color: theme.colors.textMain,
+					borderColor: theme.colors.accent,
+				}}
+			>
+				<div className="flex items-start gap-2">
+					<span
+						className="px-1.5 py-0.5 rounded shrink-0"
+						style={{
+							backgroundColor: `${theme.colors.accent}30`,
+							color: theme.colors.accent,
+						}}
+					>
+						{log.text}
+					</span>
+					{toolStatus === 'running' && (
+						<span
+							className="animate-pulse shrink-0 pt-0.5"
+							style={{ color: theme.colors.warning }}
+						>
+							●
+						</span>
+					)}
+					{toolStatus === 'completed' && (
+						<span className="shrink-0 pt-0.5" style={{ color: theme.colors.success }}>
+							✓
+						</span>
+					)}
+					{toolDetail && (
+						<span
+							className="opacity-70 break-words whitespace-pre-wrap"
+							style={{ color: theme.colors.textMain }}
+						>
+							{toolDetail}
+						</span>
+					)}
+				</div>
+			</div>
+		);
+	}
+
+	// User entry — right-aligned with User icon
+	if (isUser) {
+		return (
+			<div className="flex gap-2" style={{ flexDirection: 'row-reverse' }}>
 				<div
+					className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+					style={{ backgroundColor: `${theme.colors.success}20` }}
+				>
+					<User className="w-3.5 h-3.5" style={{ color: theme.colors.success }} />
+				</div>
+				<div
+					className="flex-1 rounded-lg px-3 py-2 text-sm"
 					style={{
-						whiteSpace: 'pre-wrap',
-						wordBreak: 'break-word',
-						fontSize: 13,
-						lineHeight: 1.5,
+						backgroundColor: `${theme.colors.accent}10`,
+						color: theme.colors.textMain,
+						maxWidth: '85%',
 					}}
 				>
-					{truncateLogText(log.text)}
-				</div>
-
-				{/* Timestamp */}
-				<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
-					{formatRelativeTime(log.timestamp)}
+					<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}>
+						{log.text}
+					</div>
+					<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
+						{formatRelativeTime(log.timestamp)}
+					</div>
 				</div>
 			</div>
-		</div>
-	);
+		);
+	}
+
+	// AI / stdout entry — left-aligned with Bot icon + markdown
+	if (isAI) {
+		const handleCopy = (text: string) => {
+			navigator.clipboard.writeText(text).catch(() => {});
+		};
+
+		return (
+			<div className="flex gap-2 group">
+				<div
+					className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+					style={{ backgroundColor: `${theme.colors.accent}20` }}
+				>
+					<Bot className="w-3.5 h-3.5" style={{ color: theme.colors.accent }} />
+				</div>
+				<div
+					className="flex-1 rounded-lg px-3 py-2 text-sm"
+					style={{
+						backgroundColor: `${theme.colors.bgActivity}80`,
+						color: theme.colors.textMain,
+						maxWidth: '85%',
+					}}
+				>
+					{/* Raw/rendered toggle */}
+					<div className="flex justify-end">
+						<button
+							onClick={onToggleRaw}
+							className="p-1 rounded opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+							style={{ color: showRawMarkdown ? theme.colors.accent : theme.colors.textDim }}
+							title={showRawMarkdown ? 'Show formatted' : 'Show plain text'}
+						>
+							{showRawMarkdown ? <Eye className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+						</button>
+					</div>
+
+					{showRawMarkdown ? (
+						<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.5 }}>
+							{log.text}
+						</div>
+					) : (
+						<MarkdownRenderer
+							content={log.text}
+							theme={theme}
+							onCopy={handleCopy}
+						/>
+					)}
+
+					<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
+						{formatRelativeTime(log.timestamp)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Fallback — should not reach here given the filter
+	return null;
 }
 
 interface FocusModeViewProps {
@@ -122,17 +269,36 @@ export default function FocusModeView({
 	// Session existence check (session may be deleted while focus mode is open)
 	const sessionExists = sessions.some((s) => s.id === item.sessionId);
 
-	// Compute conversation tail — last N AI/user log entries
+	// ---- Thinking toggle state ----
+	const [showThinking, setShowThinking] = useState(false);
+
+	// ---- Raw markdown toggle (per-session, not per-log) ----
+	const [showRawMarkdown, setShowRawMarkdown] = useState(false);
+
+	// Compute conversation tail — last N renderable log entries
 	const logs = useMemo(() => {
 		const session = sessions.find((s) => s.id === item.sessionId);
 		if (!session) return [];
 		const tab = session.aiTabs.find((t) => t.id === item.tabId);
 		if (!tab) return [];
-		// Filter to only show AI and user messages
-		const relevant = tab.logs.filter((log) => log.source === 'ai' || log.source === 'user');
+		// Include all renderable log types
+		const relevant = tab.logs.filter(
+			(log) =>
+				log.source === 'ai' ||
+				log.source === 'stdout' ||
+				log.source === 'user' ||
+				log.source === 'thinking' ||
+				log.source === 'tool'
+		);
 		// Take last N entries
 		return relevant.slice(-MAX_LOG_ENTRIES);
 	}, [sessions, item.sessionId, item.tabId]);
+
+	// Filter out thinking/tool when toggle is off
+	const visibleLogs = useMemo(() => {
+		if (showThinking) return logs;
+		return logs.filter((log) => log.source !== 'thinking' && log.source !== 'tool');
+	}, [logs, showThinking]);
 
 	// Auto-scroll to bottom when logs change or item changes
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -141,7 +307,7 @@ export default function FocusModeView({
 		if (scrollRef.current) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
-	}, [logs, item.sessionId, item.tabId]);
+	}, [visibleLogs, item.sessionId, item.tabId]);
 
 	// ---- Reply state ----
 	const [replyText, setReplyText] = useState('');
@@ -195,6 +361,7 @@ export default function FocusModeView({
 				className="flex items-center px-4 border-b"
 				style={{
 					height: 48,
+					backgroundColor: theme.colors.bgSidebar,
 					borderColor: theme.colors.border,
 				}}
 			>
@@ -235,7 +402,9 @@ export default function FocusModeView({
 					</span>
 					{item.tabName && (
 						<>
-							<span className="text-xs" style={{ color: theme.colors.textDim }}>·</span>
+							<span className="text-xs" style={{ color: theme.colors.textDim }}>
+								·
+							</span>
 							<span
 								className="text-xs"
 								style={{
@@ -285,9 +454,7 @@ export default function FocusModeView({
 					onClick={onClose}
 					className="p-1.5 rounded"
 					style={{ color: theme.colors.textDim }}
-					onMouseEnter={(e) =>
-						(e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)
-					}
+					onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)}
 					onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
 					title="Close (Esc)"
 				>
@@ -317,9 +484,7 @@ export default function FocusModeView({
 					</span>
 				)}
 				{hasValidContext && (
-					<span style={{ color: contextColor }}>
-						Context: {item.contextUsage}%
-					</span>
+					<span style={{ color: contextColor }}>Context: {item.contextUsage}%</span>
 				)}
 				<span
 					style={{
@@ -332,11 +497,28 @@ export default function FocusModeView({
 				>
 					{STATUS_LABELS[item.state]}
 				</span>
+				{/* Thinking toggle */}
+				<button
+					onClick={() => setShowThinking((v) => !v)}
+					className="p-1 rounded transition-colors"
+					style={{
+						color: showThinking ? theme.colors.accent : theme.colors.textDim,
+						backgroundColor: 'transparent',
+						border: 'none',
+						cursor: 'pointer',
+					}}
+					title={showThinking ? 'Hide thinking & tools' : 'Show thinking & tools'}
+				>
+					{showThinking ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+				</button>
 			</div>
 
 			{/* Body — conversation tail */}
 			{!sessionExists ? (
-				<div className="flex-1 flex items-center justify-center" style={{ color: theme.colors.textDim }}>
+				<div
+					className="flex-1 flex items-center justify-center"
+					style={{ color: theme.colors.textDim }}
+				>
 					<span className="text-sm">Session no longer available</span>
 				</div>
 			) : (
@@ -351,7 +533,7 @@ export default function FocusModeView({
 						transition: 'opacity 150ms ease',
 					}}
 				>
-					{logs.length === 0 ? (
+					{visibleLogs.length === 0 ? (
 						<div
 							className="flex items-center justify-center h-full"
 							style={{ color: theme.colors.textDim }}
@@ -360,8 +542,14 @@ export default function FocusModeView({
 						</div>
 					) : (
 						<div className="flex flex-col gap-3">
-							{logs.map((log) => (
-								<LogBubble key={log.id} log={log} theme={theme} />
+							{visibleLogs.map((log) => (
+								<FocusLogEntry
+									key={log.id}
+									log={log}
+									theme={theme}
+									showRawMarkdown={showRawMarkdown}
+									onToggleRaw={() => setShowRawMarkdown((v) => !v)}
+								/>
 							))}
 						</div>
 					)}
@@ -460,7 +648,8 @@ export default function FocusModeView({
 						opacity: items.length <= 1 ? 0.4 : 1,
 					}}
 					onMouseEnter={(e) => {
-						if (items.length > 1) e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
+						if (items.length > 1)
+							e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
 					}}
 					onMouseLeave={(e) => {
 						e.currentTarget.style.backgroundColor = 'transparent';
@@ -499,7 +688,8 @@ export default function FocusModeView({
 						opacity: items.length <= 1 ? 0.4 : 1,
 					}}
 					onMouseEnter={(e) => {
-						if (items.length > 1) e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
+						if (items.length > 1)
+							e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
 					}}
 					onMouseLeave={(e) => {
 						e.currentTarget.style.backgroundColor = 'transparent';

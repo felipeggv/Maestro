@@ -1,7 +1,7 @@
 /**
  * @fileoverview Comprehensive tests for FocusModeView component
- * Covers: rendering, conversation logs, reply input, mark as read,
- * navigation, ARIA attributes, and edge cases.
+ * Covers: rendering, conversation logs, markdown rendering, thinking/tool toggle,
+ * reply input, mark as read, navigation, ARIA attributes, and edge cases.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -36,11 +36,27 @@ vi.mock('lucide-react', () => ({
 	ChevronRight: ({ className }: { className?: string }) => (
 		<span data-testid="chevron-right-icon" className={className}>›</span>
 	),
+	Eye: ({ className }: { className?: string }) => (
+		<span data-testid="eye-icon" className={className}>👁</span>
+	),
+	EyeOff: ({ className }: { className?: string }) => (
+		<span data-testid="eye-off-icon" className={className}>🚫</span>
+	),
+	FileText: ({ className }: { className?: string }) => (
+		<span data-testid="file-text-icon" className={className}>📄</span>
+	),
 }));
 
 // Mock formatRelativeTime
 vi.mock('../../../renderer/utils/formatters', () => ({
 	formatRelativeTime: () => '5m ago',
+}));
+
+// Mock MarkdownRenderer — renders content as plain text with a data attribute
+vi.mock('../../../renderer/components/MarkdownRenderer', () => ({
+	MarkdownRenderer: ({ content }: { content: string }) => (
+		<div data-testid="markdown-renderer">{content}</div>
+	),
 }));
 
 // ============================================================================
@@ -215,7 +231,7 @@ describe('FocusModeView (rendering)', () => {
 // Conversation tests
 // ============================================================================
 describe('FocusModeView (conversation)', () => {
-	it('7. renders conversation log entries', () => {
+	it('7. renders conversation log entries via MarkdownRenderer for AI', () => {
 		const logs = [
 			{ id: 'l1', timestamp: 1000, source: 'ai', text: 'Hello from AI' },
 			{ id: 'l2', timestamp: 2000, source: 'user', text: 'User reply here' },
@@ -224,16 +240,30 @@ describe('FocusModeView (conversation)', () => {
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
 		});
+		// AI message rendered via MarkdownRenderer mock
 		expect(screen.getByText('Hello from AI')).toBeDefined();
 		expect(screen.getByText('User reply here')).toBeDefined();
 	});
 
-	it('8. filters out system/tool/thinking log entries', () => {
+	it('7b. renders stdout logs as AI messages', () => {
+		const logs = [
+			{ id: 'l1', timestamp: 1000, source: 'stdout', text: 'Stdout AI output' },
+		];
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1' })],
+			sessions: [createSession('s1', 't1', logs)],
+		});
+		expect(screen.getByText('Stdout AI output')).toBeDefined();
+		expect(screen.getByTestId('bot-icon')).toBeDefined();
+	});
+
+	it('8. hides thinking/tool entries by default, shows system as always hidden', () => {
 		const logs = [
 			{ id: 'l1', timestamp: 1000, source: 'ai', text: 'Visible AI message' },
 			{ id: 'l2', timestamp: 2000, source: 'system', text: 'System log hidden' },
 			{ id: 'l3', timestamp: 3000, source: 'tool', text: 'Tool log hidden' },
-			{ id: 'l4', timestamp: 4000, source: 'user', text: 'Visible user message' },
+			{ id: 'l4', timestamp: 4000, source: 'thinking', text: 'Thinking hidden' },
+			{ id: 'l5', timestamp: 5000, source: 'user', text: 'Visible user message' },
 		];
 		renderFocusView({
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
@@ -242,7 +272,27 @@ describe('FocusModeView (conversation)', () => {
 		expect(screen.getByText('Visible AI message')).toBeDefined();
 		expect(screen.getByText('Visible user message')).toBeDefined();
 		expect(screen.queryByText('System log hidden')).toBeNull();
+		// Thinking and tool hidden by default (toggle off)
 		expect(screen.queryByText('Tool log hidden')).toBeNull();
+		expect(screen.queryByText('Thinking hidden')).toBeNull();
+	});
+
+	it('8b. shows thinking/tool entries when toggle is enabled', () => {
+		const logs = [
+			{ id: 'l1', timestamp: 1000, source: 'ai', text: 'AI message' },
+			{ id: 'l2', timestamp: 2000, source: 'thinking', text: 'Thinking visible' },
+			{ id: 'l3', timestamp: 3000, source: 'tool', text: 'Tool visible' },
+		];
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1' })],
+			sessions: [createSession('s1', 't1', logs)],
+		});
+		// Click thinking toggle button
+		const toggleButton = screen.getByTitle('Show thinking & tools');
+		fireEvent.click(toggleButton);
+
+		expect(screen.getByText('Thinking visible')).toBeDefined();
+		expect(screen.getByText('Tool visible')).toBeDefined();
 	});
 
 	it('9. shows empty state when no logs', () => {
@@ -253,7 +303,7 @@ describe('FocusModeView (conversation)', () => {
 		expect(screen.getByText('No conversation yet')).toBeDefined();
 	});
 
-	it('10. truncates long log text', () => {
+	it('10. renders long AI text fully via MarkdownRenderer (no truncation)', () => {
 		const longText = 'A'.repeat(600);
 		const logs = [
 			{ id: 'l1', timestamp: 1000, source: 'ai', text: longText },
@@ -262,10 +312,10 @@ describe('FocusModeView (conversation)', () => {
 			items: [createItem({ sessionId: 's1', tabId: 't1' })],
 			sessions: [createSession('s1', 't1', logs)],
 		});
-		// Should contain truncated marker
-		expect(screen.getByText(/… \(truncated\)/)).toBeDefined();
-		// Should NOT contain full 600 char string
-		expect(screen.queryByText(longText)).toBeNull();
+		// MarkdownRenderer mock renders the full text
+		expect(screen.getByText(longText)).toBeDefined();
+		// No truncation marker
+		expect(screen.queryByText(/… \(truncated\)/)).toBeNull();
 	});
 
 	it('11. shows Bot icon for AI messages', () => {
@@ -288,6 +338,51 @@ describe('FocusModeView (conversation)', () => {
 			sessions: [createSession('s1', 't1', logs)],
 		});
 		expect(screen.getByTestId('user-icon')).toBeDefined();
+	});
+
+	it('12b. thinking entry renders with "thinking" badge', () => {
+		const logs = [
+			{ id: 'l1', timestamp: 1000, source: 'thinking', text: 'Deep thought...' },
+		];
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1' })],
+			sessions: [createSession('s1', 't1', logs)],
+		});
+		// Enable thinking toggle first
+		const toggleButton = screen.getByTitle('Show thinking & tools');
+		fireEvent.click(toggleButton);
+
+		expect(screen.getByText('thinking')).toBeDefined();
+		expect(screen.getByText('Deep thought...')).toBeDefined();
+	});
+
+	it('12c. tool entry renders with tool name badge', () => {
+		const logs = [
+			{ id: 'l1', timestamp: 1000, source: 'tool', text: 'Read', metadata: { toolState: { status: 'completed', input: { file_path: '/src/index.ts' } } } },
+		];
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1' })],
+			sessions: [createSession('s1', 't1', logs)],
+		});
+		// Enable thinking toggle first
+		const toggleButton = screen.getByTitle('Show thinking & tools');
+		fireEvent.click(toggleButton);
+
+		expect(screen.getByText('Read')).toBeDefined();
+		expect(screen.getByText('/src/index.ts')).toBeDefined();
+		expect(screen.getByText('✓')).toBeDefined();
+	});
+
+	it('12d. AI message renders via MarkdownRenderer', () => {
+		const logs = [
+			{ id: 'l1', timestamp: 1000, source: 'stdout', text: '**bold** text' },
+		];
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1' })],
+			sessions: [createSession('s1', 't1', logs)],
+		});
+		// MarkdownRenderer is used for AI/stdout
+		expect(screen.getByTestId('markdown-renderer')).toBeDefined();
 	});
 });
 
@@ -516,5 +611,44 @@ describe('FocusModeView (ARIA)', () => {
 		const nextButton = screen.getByTitle('Next item (→)').closest('button');
 		expect(prevButton?.getAttribute('aria-disabled')).toBe('true');
 		expect(nextButton?.getAttribute('aria-disabled')).toBe('true');
+	});
+});
+
+// ============================================================================
+// Thinking toggle tests
+// ============================================================================
+describe('FocusModeView (thinking toggle)', () => {
+	it('31. renders thinking toggle button in subheader', () => {
+		renderFocusView();
+		expect(screen.getByTitle('Show thinking & tools')).toBeDefined();
+	});
+
+	it('32. toggles title text when clicked', () => {
+		renderFocusView();
+		const toggle = screen.getByTitle('Show thinking & tools');
+		fireEvent.click(toggle);
+		expect(screen.getByTitle('Hide thinking & tools')).toBeDefined();
+	});
+
+	it('33. thinking entries hidden by default, visible after toggle', () => {
+		const logs = [
+			{ id: 'l1', timestamp: 1000, source: 'ai', text: 'AI msg' },
+			{ id: 'l2', timestamp: 2000, source: 'thinking', text: 'Internal reasoning' },
+		];
+		renderFocusView({
+			items: [createItem({ sessionId: 's1', tabId: 't1' })],
+			sessions: [createSession('s1', 't1', logs)],
+		});
+
+		// Hidden by default
+		expect(screen.queryByText('Internal reasoning')).toBeNull();
+
+		// Toggle on
+		fireEvent.click(screen.getByTitle('Show thinking & tools'));
+		expect(screen.getByText('Internal reasoning')).toBeDefined();
+
+		// Toggle off again
+		fireEvent.click(screen.getByTitle('Hide thinking & tools'));
+		expect(screen.queryByText('Internal reasoning')).toBeNull();
 	});
 });
