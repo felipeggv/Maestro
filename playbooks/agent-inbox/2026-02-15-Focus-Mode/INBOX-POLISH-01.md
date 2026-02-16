@@ -334,4 +334,5 @@ Both should use a "visible item index" (a counter that only increments for visib
 
 ## Gate
 
-- [ ] Invoke `/AIOS:agents:dev` to run the gate check: `npx tsc --noEmit 2>&1 | head -10 && npx vitest run src/__tests__/renderer/components/AgentInbox.test.tsx 2>&1 | tail -10`. Fix any type errors or test failures before completing. If tests reference `row.index` for badge assertions, update them to expect `visibleItemNumbers`-based values instead.
+- [x] Invoke `/AIOS:agents:dev` to run the gate check: `npx tsc --noEmit 2>&1 | head -10 && npx vitest run src/__tests__/renderer/components/AgentInbox.test.tsx 2>&1 | tail -10`. Fix any type errors or test failures before completing. If tests reference `row.index` for badge assertions, update them to expect `visibleItemNumbers`-based values instead.
+  > **Gate passed:** `tsc --noEmit` reports 0 errors in Inbox/FocusMode files (3 pre-existing TS6133 in unrelated History files). All 148 tests pass in AgentInbox.test.tsx.
