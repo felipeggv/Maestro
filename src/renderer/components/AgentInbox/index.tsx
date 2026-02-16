@@ -19,6 +19,7 @@ interface AgentInboxProps {
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
 	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
 	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
+	onMarkAsRead?: (sessionId: string, tabId: string) => void;
 }
 
 export default function AgentInbox({
@@ -29,6 +30,7 @@ export default function AgentInbox({
 	onNavigateToSession,
 	onQuickReply,
 	onOpenAndReply,
+	onMarkAsRead,
 }: AgentInboxProps) {
 	// ---- Focus restoration ----
 	// Capture trigger element synchronously during initial render (before child effects)
@@ -64,6 +66,16 @@ export default function AgentInbox({
 
 	// ---- Compute items at the shell level ----
 	const items = useAgentInbox(sessions, groups, filterMode, sortMode);
+
+	// ---- Edge case: items shrink while in focus mode ----
+	useEffect(() => {
+		if (viewMode === 'focus' && items.length > 0 && focusIndex >= items.length) {
+			setFocusIndex(items.length - 1);
+		}
+		if (viewMode === 'focus' && items.length === 0) {
+			handleExitFocus();
+		}
+	}, [items.length, focusIndex, viewMode]);
 
 	const handleEnterFocus = useCallback(
 		(item: InboxItem) => {
@@ -122,6 +134,18 @@ export default function AgentInbox({
 							setFocusIndex((prev) => (prev + 1) % items.length);
 						}
 						return;
+					case 'm':
+					case 'M':
+						if (document.activeElement?.tagName !== 'TEXTAREA') {
+							e.preventDefault();
+							if (onMarkAsRead && items[focusIndex]) {
+								onMarkAsRead(items[focusIndex].sessionId, items[focusIndex].tabId);
+								if (items.length > 1) {
+									setFocusIndex((prev) => (prev + 1) % items.length);
+								}
+							}
+						}
+						return;
 					case 'Backspace':
 					case 'b':
 					case 'B':
@@ -150,7 +174,7 @@ export default function AgentInbox({
 				listKeyDownRef.current(e);
 			}
 		},
-		[viewMode, items, selectedIndex, handleEnterFocus, handleExitFocus]
+		[viewMode, items, selectedIndex, focusIndex, onMarkAsRead, handleEnterFocus, handleExitFocus]
 	);
 
 	return (
@@ -205,10 +229,11 @@ export default function AgentInbox({
 						onNavigateToSession={onNavigateToSession}
 						onQuickReply={onQuickReply}
 						onOpenAndReply={onOpenAndReply}
+						onMarkAsRead={onMarkAsRead}
 					/>
 				) : (
 					<div style={{ color: theme.colors.textDim, padding: 40, textAlign: 'center' }}>
-						No items to focus on
+						<span className="text-sm">No items to focus on</span>
 					</div>
 				)}
 			</div>

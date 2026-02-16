@@ -157,6 +157,7 @@ export interface AppInfoModalsProps {
 	onCloseAgentInbox: () => void;
 	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
 	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
+	onMarkAsRead?: (sessionId: string, tabId: string) => void;
 
 	// Usage Dashboard Modal
 	usageDashboardOpen: boolean;
@@ -214,6 +215,7 @@ export function AppInfoModals({
 	onCloseAgentInbox,
 	onQuickReply,
 	onOpenAndReply,
+	onMarkAsRead,
 	// Usage Dashboard Modal
 	usageDashboardOpen,
 	onCloseUsageDashboard,
@@ -277,6 +279,7 @@ export function AppInfoModals({
 						onNavigateToSession={onNavigateToSession}
 						onQuickReply={onQuickReply}
 						onOpenAndReply={onOpenAndReply}
+						onMarkAsRead={onMarkAsRead}
 					/>
 				</Suspense>
 			)}
@@ -1803,6 +1806,7 @@ export interface AppModalsProps {
 	onCloseAgentInbox: () => void;
 	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
 	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
+	onMarkAsRead?: (sessionId: string, tabId: string) => void;
 	usageDashboardOpen: boolean;
 	onCloseUsageDashboard: () => void;
 	/** Default time range for the Usage Dashboard from settings */
@@ -2172,6 +2176,7 @@ export function AppModals(props: AppModalsProps) {
 		onCloseAgentInbox,
 		onQuickReply,
 		onOpenAndReply,
+		onMarkAsRead,
 		usageDashboardOpen,
 		onCloseUsageDashboard,
 		defaultStatsTimeRange,
@@ -2449,6 +2454,7 @@ export function AppModals(props: AppModalsProps) {
 				onCloseAgentInbox={onCloseAgentInbox}
 				onQuickReply={onQuickReply}
 				onOpenAndReply={onOpenAndReply}
+				onMarkAsRead={onMarkAsRead}
 				usageDashboardOpen={usageDashboardOpen}
 				onCloseUsageDashboard={onCloseUsageDashboard}
 				defaultStatsTimeRange={defaultStatsTimeRange}

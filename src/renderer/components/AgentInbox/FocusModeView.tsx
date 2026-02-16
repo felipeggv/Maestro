@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, X, Bot, User, ArrowUp, ExternalLink } from 'lucide-react';
+import { ArrowLeft, X, Bot, User, ArrowUp, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Theme, Session, LogEntry } from '../../types';
 import type { InboxItem } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
@@ -80,6 +80,7 @@ interface FocusModeViewProps {
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
 	onQuickReply?: (sessionId: string, tabId: string, text: string) => void;
 	onOpenAndReply?: (sessionId: string, tabId: string, text: string) => void;
+	onMarkAsRead?: (sessionId: string, tabId: string) => void;
 }
 
 // Maps STATUS_COLORS key to actual hex from theme
@@ -106,8 +107,8 @@ export default function FocusModeView({
 	onNavigateItem,
 	onQuickReply,
 	onOpenAndReply,
+	onMarkAsRead,
 }: FocusModeViewProps) {
-	const navDisabled = items.length <= 1;
 	const statusColor = resolveStatusColor(item.state, theme);
 	const hasValidContext = item.contextUsage !== undefined && !isNaN(item.contextUsage);
 	const contextColor = hasValidContext
@@ -173,6 +174,20 @@ export default function FocusModeView({
 		}
 	}, [replyText, item, onOpenAndReply]);
 
+	// ---- Smooth transition on item change ----
+	const [isTransitioning, setIsTransitioning] = useState(false);
+	const prevItemRef = useRef<string>(`${item.sessionId}-${item.tabId}`);
+
+	useEffect(() => {
+		const currentKey = `${item.sessionId}-${item.tabId}`;
+		if (prevItemRef.current !== currentKey) {
+			setIsTransitioning(true);
+			const timer = setTimeout(() => setIsTransitioning(false), 150);
+			prevItemRef.current = currentKey;
+			return () => clearTimeout(timer);
+		}
+	}, [item.sessionId, item.tabId]);
+
 	return (
 		<div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
 			{/* Header bar — 48px */}
@@ -235,6 +250,35 @@ export default function FocusModeView({
 						</>
 					)}
 				</div>
+
+				{/* Mark Read button */}
+				<button
+					onClick={() => {
+						if (onMarkAsRead) {
+							onMarkAsRead(item.sessionId, item.tabId);
+						}
+						// Auto-advance after marking as read
+						if (items.length > 1) {
+							const nextIndex = (currentIndex + 1) % items.length;
+							onNavigateItem(nextIndex);
+						}
+					}}
+					className="text-xs px-2 py-1 rounded transition-colors"
+					style={{
+						border: `1px solid ${theme.colors.border}`,
+						color: theme.colors.textDim,
+						backgroundColor: 'transparent',
+					}}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.backgroundColor = 'transparent';
+					}}
+					title="Mark as read and advance (M)"
+				>
+					✓ Read
+				</button>
 
 				{/* Right: Close button */}
 				<button
@@ -301,7 +345,11 @@ export default function FocusModeView({
 					role="log"
 					aria-label="Agent conversation"
 					className="flex-1 overflow-y-auto px-4 py-3"
-					style={{ minHeight: 0 }}
+					style={{
+						minHeight: 0,
+						opacity: isTransitioning ? 0.3 : 1,
+						transition: 'opacity 150ms ease',
+					}}
 				>
 					{logs.length === 0 ? (
 						<div
@@ -400,73 +448,66 @@ export default function FocusModeView({
 			>
 				{/* Prev button */}
 				<button
-					aria-disabled={navDisabled ? 'true' : undefined}
-					disabled={navDisabled}
-					onClick={() =>
-						onNavigateItem((currentIndex - 1 + items.length) % items.length)
-					}
-					className="text-xs px-3 py-1 rounded"
+					onClick={() => onNavigateItem((currentIndex - 1 + items.length) % items.length)}
+					disabled={items.length <= 1}
+					aria-disabled={items.length <= 1 ? 'true' : undefined}
+					className="flex items-center gap-1 text-xs px-3 py-1.5 rounded transition-colors"
 					style={{
 						border: `1px solid ${theme.colors.border}`,
+						color: items.length > 1 ? theme.colors.textMain : theme.colors.textDim,
 						backgroundColor: 'transparent',
-						color: navDisabled ? theme.colors.textDim : theme.colors.textMain,
-						cursor: navDisabled ? 'default' : 'pointer',
-						opacity: navDisabled ? 0.5 : 1,
+						cursor: items.length > 1 ? 'pointer' : 'default',
+						opacity: items.length <= 1 ? 0.4 : 1,
 					}}
 					onMouseEnter={(e) => {
-						if (!navDisabled) {
-							e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
-						}
+						if (items.length > 1) e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
 					}}
 					onMouseLeave={(e) => {
 						e.currentTarget.style.backgroundColor = 'transparent';
 					}}
+					title="Previous item (←)"
 				>
-					← Prev
+					<ChevronLeft className="w-3 h-3" />
+					Prev
 				</button>
 
 				{/* Center: counter + keyboard hints */}
 				<div className="flex flex-col items-center gap-0.5">
 					<span
 						aria-live="polite"
-						className="text-xs"
-						style={{ color: theme.colors.textDim }}
+						className="text-sm font-medium"
+						style={{ color: theme.colors.textMain }}
 					>
 						{currentIndex + 1} / {items.length}
 					</span>
-					<span
-						className="text-xs"
-						style={{ color: theme.colors.textDim, opacity: 0.7 }}
-					>
-						←→ Navigate · Esc Back
+					<span className="text-xs" style={{ color: theme.colors.textDim, opacity: 0.6 }}>
+						←→ Navigate · M Read · Esc Back
 					</span>
 				</div>
 
 				{/* Next button */}
 				<button
-					aria-disabled={navDisabled ? 'true' : undefined}
-					disabled={navDisabled}
-					onClick={() =>
-						onNavigateItem((currentIndex + 1) % items.length)
-					}
-					className="text-xs px-3 py-1 rounded"
+					onClick={() => onNavigateItem((currentIndex + 1) % items.length)}
+					disabled={items.length <= 1}
+					aria-disabled={items.length <= 1 ? 'true' : undefined}
+					className="flex items-center gap-1 text-xs px-3 py-1.5 rounded transition-colors"
 					style={{
 						border: `1px solid ${theme.colors.border}`,
+						color: items.length > 1 ? theme.colors.textMain : theme.colors.textDim,
 						backgroundColor: 'transparent',
-						color: navDisabled ? theme.colors.textDim : theme.colors.textMain,
-						cursor: navDisabled ? 'default' : 'pointer',
-						opacity: navDisabled ? 0.5 : 1,
+						cursor: items.length > 1 ? 'pointer' : 'default',
+						opacity: items.length <= 1 ? 0.4 : 1,
 					}}
 					onMouseEnter={(e) => {
-						if (!navDisabled) {
-							e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
-						}
+						if (items.length > 1) e.currentTarget.style.backgroundColor = `${theme.colors.accent}10`;
 					}}
 					onMouseLeave={(e) => {
 						e.currentTarget.style.backgroundColor = 'transparent';
 					}}
+					title="Next item (→)"
 				>
-					Next →
+					Next
+					<ChevronRight className="w-3 h-3" />
 				</button>
 			</div>
 		</div>

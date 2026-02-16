@@ -30,6 +30,12 @@ vi.mock('lucide-react', () => ({
 	ExternalLink: ({ className }: { className?: string }) => (
 		<span data-testid="external-link-icon" className={className}>↗</span>
 	),
+	ChevronLeft: ({ className }: { className?: string }) => (
+		<span data-testid="chevron-left-icon" className={className}>‹</span>
+	),
+	ChevronRight: ({ className }: { className?: string }) => (
+		<span data-testid="chevron-right-icon" className={className}>›</span>
+	),
 }));
 
 // ============================================================================
@@ -87,6 +93,7 @@ function renderFocusView(overrides: {
 	sessions?: Session[];
 	onQuickReply?: ReturnType<typeof vi.fn>;
 	onOpenAndReply?: ReturnType<typeof vi.fn>;
+	onMarkAsRead?: ReturnType<typeof vi.fn>;
 	onNavigateItem?: ReturnType<typeof vi.fn>;
 } = {}) {
 	const item = createItem();
@@ -108,6 +115,7 @@ function renderFocusView(overrides: {
 			onNavigateItem={onNavigateItem}
 			onQuickReply={overrides.onQuickReply}
 			onOpenAndReply={overrides.onOpenAndReply}
+			onMarkAsRead={overrides.onMarkAsRead}
 		/>
 	);
 }
@@ -127,9 +135,11 @@ describe('FocusModeView (smoke)', () => {
 		renderFocusView();
 		// "1 / 1" counter
 		expect(screen.getByText('1 / 1')).toBeDefined();
-		// Prev/Next buttons
-		expect(screen.getByText('← Prev')).toBeDefined();
-		expect(screen.getByText('Next →')).toBeDefined();
+		// Prev/Next buttons with chevron icons
+		expect(screen.getByText('Prev')).toBeDefined();
+		expect(screen.getByText('Next')).toBeDefined();
+		expect(screen.getByTestId('chevron-left-icon')).toBeDefined();
+		expect(screen.getByTestId('chevron-right-icon')).toBeDefined();
 	});
 
 	it('renders ARIA attributes', () => {
@@ -167,7 +177,7 @@ describe('FocusModeView (smoke)', () => {
 
 	it('disables prev/next when only one item', () => {
 		renderFocusView();
-		const prevButton = screen.getByText('← Prev');
+		const prevButton = screen.getByTitle('Previous item (←)');
 		expect(prevButton.closest('button')?.disabled).toBe(true);
 		expect(prevButton.closest('button')?.getAttribute('aria-disabled')).toBe('true');
 	});
@@ -180,9 +190,21 @@ describe('FocusModeView (smoke)', () => {
 			],
 			currentIndex: 0,
 		});
-		const prevButton = screen.getByText('← Prev').closest('button');
+		const prevButton = screen.getByTitle('Previous item (←)').closest('button');
 		expect(prevButton?.disabled).toBe(false);
 		expect(prevButton?.getAttribute('aria-disabled')).toBeNull();
+	});
+
+	it('renders Mark Read button in header', () => {
+		renderFocusView();
+		const markReadButton = screen.getByTitle('Mark as read and advance (M)');
+		expect(markReadButton).toBeDefined();
+		expect(screen.getByText('✓ Read')).toBeDefined();
+	});
+
+	it('renders keyboard hints including M Read', () => {
+		renderFocusView();
+		expect(screen.getByText('←→ Navigate · M Read · Esc Back')).toBeDefined();
 	});
 });
 
@@ -243,5 +265,42 @@ describe('FocusModeView (reply)', () => {
 		expect(textarea.value).toBe('');
 		// Should auto-advance to next item (index 1)
 		expect(onNavigateItem).toHaveBeenCalledWith(1);
+	});
+});
+
+describe('FocusModeView (mark as read)', () => {
+	it('calls onMarkAsRead and auto-advances when Mark Read clicked', () => {
+		const onMarkAsRead = vi.fn();
+		const onNavigateItem = vi.fn();
+		renderFocusView({
+			items: [
+				createItem({ sessionId: 's1', tabId: 't1' }),
+				createItem({ sessionId: 's2', tabId: 't2', sessionName: 'Agent 2' }),
+			],
+			currentIndex: 0,
+			onMarkAsRead,
+			onNavigateItem,
+		});
+
+		const markReadButton = screen.getByTitle('Mark as read and advance (M)');
+		fireEvent.click(markReadButton);
+
+		expect(onMarkAsRead).toHaveBeenCalledWith('s1', 't1');
+		expect(onNavigateItem).toHaveBeenCalledWith(1);
+	});
+
+	it('does not auto-advance when only one item', () => {
+		const onMarkAsRead = vi.fn();
+		const onNavigateItem = vi.fn();
+		renderFocusView({
+			onMarkAsRead,
+			onNavigateItem,
+		});
+
+		const markReadButton = screen.getByTitle('Mark as read and advance (M)');
+		fireEvent.click(markReadButton);
+
+		expect(onMarkAsRead).toHaveBeenCalledWith('session-1', 'tab-1');
+		expect(onNavigateItem).not.toHaveBeenCalled();
 	});
 });

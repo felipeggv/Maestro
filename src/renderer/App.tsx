@@ -977,6 +977,24 @@ function MaestroConsoleInner() {
 		[setActiveSessionId, setSessions, setAgentInboxOpen]
 	);
 
+	// Agent Inbox: Mark as Read — dismiss unread badge without replying
+	const handleMarkAsRead = useCallback(
+		(sessionId: string, tabId: string) => {
+			setSessions((prev) =>
+				prev.map((s) => {
+					if (s.id !== sessionId) return s;
+					return {
+						...s,
+						aiTabs: s.aiTabs.map((t) =>
+							t.id === tabId ? { ...t, hasUnread: false } : t
+						),
+					};
+				})
+			);
+		},
+		[setSessions]
+	);
+
 	const handleCloseLogViewer = useCallback(() => setLogViewerOpen(false), []);
 
 	// Confirm modal close handler
@@ -11841,6 +11859,7 @@ You are taking over this conversation. Based on the context above, provide a bri
 					onCloseAgentInbox={handleCloseAgentInbox}
 					onQuickReply={handleQuickReply}
 					onOpenAndReply={handleOpenAndReply}
+					onMarkAsRead={handleMarkAsRead}
 					usageDashboardOpen={usageDashboardOpen}
 					onCloseUsageDashboard={() => setUsageDashboardOpen(false)}
 					defaultStatsTimeRange={defaultStatsTimeRange}
