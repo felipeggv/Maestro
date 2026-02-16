@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import FocusModeView from '../../../renderer/components/AgentInbox/FocusModeView';
 import type { Theme, Session } from '../../../renderer/types';
 import type { InboxItem } from '../../../renderer/types/agent-inbox';
@@ -396,6 +396,23 @@ describe('FocusModeView (reply)', () => {
 		const textarea = screen.getByPlaceholderText('Reply to agent...');
 		expect(textarea).toBeDefined();
 		expect(textarea.getAttribute('aria-label')).toBe('Reply to agent');
+	});
+
+	it('13b. auto-focuses reply textarea after mount (200ms delay)', async () => {
+		vi.useFakeTimers();
+		renderFocusView();
+		const textarea = screen.getByPlaceholderText('Reply to agent...');
+
+		// Before timer fires, textarea should not be focused
+		expect(document.activeElement).not.toBe(textarea);
+
+		// Advance past the 200ms auto-focus delay
+		await act(async () => {
+			vi.advanceTimersByTime(200);
+		});
+
+		expect(document.activeElement).toBe(textarea);
+		vi.useRealTimers();
 	});
 
 	it('14. quick reply button disabled when empty', () => {

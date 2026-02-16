@@ -54,7 +54,7 @@ export const DEFAULT_SHORTCUTS: Record<string, Shortcut> = {
 		keys: ['Alt', 'Meta', 'p'],
 	},
 	usageDashboard: { id: 'usageDashboard', label: 'Usage Dashboard', keys: ['Alt', 'Meta', 'u'] },
-	agentInbox: { id: 'agentInbox', label: 'Agent Inbox', keys: ['Alt', 'Meta', 'i'] },
+	agentInbox: { id: 'agentInbox', label: 'Unified Inbox', keys: ['Alt', 'Meta', 'i'] },
 	jumpToBottom: { id: 'jumpToBottom', label: 'Jump to Bottom', keys: ['Meta', 'Shift', 'j'] },
 	prevTab: { id: 'prevTab', label: 'Previous Tab', keys: ['Meta', 'Shift', '['] },
 	nextTab: { id: 'nextTab', label: 'Next Tab', keys: ['Meta', 'Shift', ']'] },
@@ -114,6 +114,37 @@ export const FIXED_SHORTCUTS: Record<string, Shortcut> = {
 		id: 'filePreviewForward',
 		label: 'File Preview: Go Forward',
 		keys: ['Meta', 'ArrowRight'],
+	},
+	// Focus Mode shortcuts (active only inside Unified Inbox Focus Mode)
+	focusPrevItem: {
+		id: 'focusPrevItem',
+		label: 'Focus Mode: Previous Item',
+		keys: ['Meta', 'ArrowLeft'],
+	},
+	focusNextItem: {
+		id: 'focusNextItem',
+		label: 'Focus Mode: Next Item',
+		keys: ['Meta', 'ArrowRight'],
+	},
+	focusExitToList: {
+		id: 'focusExitToList',
+		label: 'Focus Mode: Back to List',
+		keys: ['Escape'],
+	},
+	focusQuickReply: {
+		id: 'focusQuickReply',
+		label: 'Focus Mode: Quick Reply',
+		keys: ['Enter'],
+	},
+	focusOpenAndReply: {
+		id: 'focusOpenAndReply',
+		label: 'Focus Mode: Open & Reply',
+		keys: ['Shift', 'Enter'],
+	},
+	inboxEnterFocus: {
+		id: 'inboxEnterFocus',
+		label: 'Inbox: Enter Focus Mode',
+		keys: ['f'],
 	},
 };
 
