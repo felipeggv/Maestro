@@ -109,6 +109,14 @@ export default function AgentInbox({
 	// ---- Expanded state (lifted to shell for dialog width control) ----
 	const [isExpanded, setIsExpanded] = useState(inboxData?.isExpanded ?? false);
 
+	// ---- Compute dialog dimensions (focus mode or expanded → wide) ----
+	const isWide = isExpanded || viewMode === 'focus';
+	const dialogWidth = isWide
+		? Math.min(typeof window !== 'undefined' ? window.innerWidth * 0.9 : 1200, 1200)
+		: 780;
+	const dialogMaxHeight = isWide ? '90vh' : '80vh';
+	const dialogMinHeight = viewMode === 'focus' ? '70vh' : undefined;
+
 	// ---- Keyboard handler ref from InboxListView ----
 	const listKeyDownRef = useRef<((e: React.KeyboardEvent) => void) | null>(null);
 
@@ -188,54 +196,59 @@ export default function AgentInbox({
 				role="dialog"
 				aria-modal="true"
 				aria-label="Unified Inbox"
-				className={`${isExpanded ? 'w-[1200px] max-w-[95vw]' : 'w-[780px]'} rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none`}
+				className="rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none"
 				style={{
 					backgroundColor: theme.colors.bgActivity,
 					borderColor: theme.colors.border,
-					maxHeight: isExpanded ? '90vh' : '80vh',
-					transition: 'width 200ms ease, max-height 200ms ease',
+					width: dialogWidth,
+					maxWidth: '95vw',
+					maxHeight: dialogMaxHeight,
+					minHeight: dialogMinHeight,
+					transition: 'width 200ms ease, max-height 200ms ease, min-height 200ms ease',
 				}}
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={handleShellKeyDown}
 			>
-				{viewMode === 'list' ? (
-					<InboxListView
-						theme={theme}
-						items={items}
-						selectedIndex={selectedIndex}
-						setSelectedIndex={setSelectedIndex}
-						filterMode={filterMode}
-						setFilterMode={setFilterMode}
-						sortMode={sortMode}
-						setSortMode={setSortMode}
-						onClose={handleClose}
-						onNavigateToSession={onNavigateToSession}
-						onEnterFocus={handleEnterFocus}
-						containerRef={containerRef}
-						keyDownRef={listKeyDownRef}
-						isExpanded={isExpanded}
-						onToggleExpanded={setIsExpanded}
-					/>
-				) : items[focusIndex] ? (
-					<FocusModeView
-						theme={theme}
-						item={items[focusIndex]}
-						items={items}
-						sessions={sessions}
-						currentIndex={focusIndex}
-						onClose={handleClose}
-						onExitFocus={handleExitFocus}
-						onNavigateItem={setFocusIndex}
-						onNavigateToSession={onNavigateToSession}
-						onQuickReply={onQuickReply}
-						onOpenAndReply={onOpenAndReply}
-						onMarkAsRead={onMarkAsRead}
-					/>
-				) : (
-					<div style={{ color: theme.colors.textDim, padding: 40, textAlign: 'center' }}>
-						<span className="text-sm">No items to focus on</span>
-					</div>
-				)}
+				<div className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
+					{viewMode === 'list' ? (
+						<InboxListView
+							theme={theme}
+							items={items}
+							selectedIndex={selectedIndex}
+							setSelectedIndex={setSelectedIndex}
+							filterMode={filterMode}
+							setFilterMode={setFilterMode}
+							sortMode={sortMode}
+							setSortMode={setSortMode}
+							onClose={handleClose}
+							onNavigateToSession={onNavigateToSession}
+							onEnterFocus={handleEnterFocus}
+							containerRef={containerRef}
+							keyDownRef={listKeyDownRef}
+							isExpanded={isExpanded}
+							onToggleExpanded={setIsExpanded}
+						/>
+					) : items[focusIndex] ? (
+						<FocusModeView
+							theme={theme}
+							item={items[focusIndex]}
+							items={items}
+							sessions={sessions}
+							currentIndex={focusIndex}
+							onClose={handleClose}
+							onExitFocus={handleExitFocus}
+							onNavigateItem={setFocusIndex}
+							onNavigateToSession={onNavigateToSession}
+							onQuickReply={onQuickReply}
+							onOpenAndReply={onOpenAndReply}
+							onMarkAsRead={onMarkAsRead}
+						/>
+					) : (
+						<div style={{ color: theme.colors.textDim, padding: 40, textAlign: 'center' }}>
+							<span className="text-sm">No items to focus on</span>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);

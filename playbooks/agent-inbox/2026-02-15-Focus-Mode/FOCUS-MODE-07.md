@@ -10,30 +10,36 @@ This phase adds the modal resize animation. When entering focus mode, the dialog
 
 ## Implement Modal Resize
 
-- [ ] **Add dynamic width/height to the modal dialog in `src/renderer/components/AgentInbox/index.tsx`.** Changes:
-
+- [x] **Add dynamic width/height to the modal dialog in `src/renderer/components/AgentInbox/index.tsx`.** Changes:
   1. **Replace the static width class** on the dialog div. Currently:
+
      ```tsx
-     className="w-[600px] rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none"
+     className =
+     	'w-[600px] rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none';
      ```
+
      Change to remove `w-[600px]` from className and use inline style instead:
+
      ```tsx
      className="rounded-xl shadow-2xl border overflow-hidden flex flex-col outline-none"
      style={{
      	backgroundColor: theme.colors.bgActivity,
      	borderColor: theme.colors.border,
-     	width: viewMode === 'focus' ? '90vw' : 600,
-     	maxWidth: viewMode === 'focus' ? 1200 : 600,
+     	width: viewMode === 'focus'
+     		? Math.min(window.innerWidth * 0.9, 1200)
+     		: 600,
      	maxHeight: viewMode === 'focus' ? '90vh' : '80vh',
-     	transition: 'width 200ms ease, max-width 200ms ease, max-height 200ms ease',
+     	transition: 'width 200ms ease, max-height 200ms ease',
      }}
      ```
 
   2. **Key design decisions:**
      - List mode: `width: 600px`, `max-height: 80vh` (same as current)
-     - Focus mode: `width: 90vw`, `max-width: 1200px` (capped so it doesn't stretch to absurd sizes on ultrawide monitors), `max-height: 90vh`
-     - Transition: `200ms ease` on width, max-width, and max-height
+     - Focus mode: `width: min(90vw, 1200px)` computed in pixels (capped so it doesn't stretch on ultrawide monitors), `max-height: 90vh`
+     - **IMPORTANT (B3 fix):** Use pixel values for BOTH endpoints (`600` and `Math.min(window.innerWidth * 0.9, 1200)`). CSS transitions require the same unit type to interpolate. Mixing `600` (px) with `'90vw'` (string) would cause a snap instead of a smooth transition in Electron's Chromium.
+     - Transition: `200ms ease` on width and max-height
      - The transition fires on `viewMode` change because the inline style values change
+     - For window resize responsiveness, add a `useEffect` that listens for window `resize` events and forces a re-render in focus mode (or just accept that the width is computed once on mode entry)
 
   3. **Ensure the overlay still centers the dialog.** The overlay already has `flex items-center justify-center`, so the dialog will re-center as it resizes. No changes needed to the overlay.
 
@@ -49,9 +55,9 @@ This phase adds the modal resize animation. When entering focus mode, the dialog
 
 ## Polish: Prevent Layout Shift During Transition
 
-- [ ] **Prevent content from jumping during the width transition.** When the dialog width changes, the InboxListView and FocusModeView swap simultaneously. This can cause a visual "pop". To smooth it out:
-
+- [x] **Prevent content from jumping during the width transition.** When the dialog width changes, the InboxListView and FocusModeView swap simultaneously. This can cause a visual "pop". To smooth it out:
   1. **Wrap the content area** (the `{viewMode === 'list' ? ... : ...}` block) in a div with `overflow: hidden`:
+
      ```tsx
      <div className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
      	{viewMode === 'list' ? (
@@ -72,7 +78,7 @@ This phase adds the modal resize animation. When entering focus mode, the dialog
 
 ## Verification Gate
 
-- [ ] **Run full verification.** Execute:
+- [x] **Run full verification.** Execute:
   ```bash
   cd ~/Documents/Vibework/Maestro && npx tsc --noEmit && npx vitest run && npx eslint src/renderer/components/AgentInbox/ --ext .ts,.tsx
   ```
@@ -82,7 +88,7 @@ This phase adds the modal resize animation. When entering focus mode, the dialog
 
 ## Commit
 
-- [ ] **Commit this phase.**
+- [x] **Commit this phase.**
   ```bash
   git add src/renderer/components/AgentInbox/index.tsx
   git commit -m "FOCUS-MODE: Phase 07 — modal resize animation (600px ↔ 90vw, 200ms ease)"

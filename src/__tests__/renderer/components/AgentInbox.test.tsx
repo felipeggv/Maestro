@@ -2235,7 +2235,8 @@ describe('AgentInbox', () => {
 			);
 			// Expand the modal
 			fireEvent.click(screen.getByTitle('Expand'));
-			expect(screen.getByRole('dialog').className).toContain('w-[1200px]');
+			const expandedWidth = Math.min(window.innerWidth * 0.9, 1200);
+			expect(screen.getByRole('dialog').style.width).toBe(`${expandedWidth}px`);
 
 			unmount();
 
@@ -2248,7 +2249,7 @@ describe('AgentInbox', () => {
 				/>
 			);
 			// Expanded state should persist
-			expect(screen.getByRole('dialog').className).toContain('w-[1200px]');
+			expect(screen.getByRole('dialog').style.width).toBe(`${expandedWidth}px`);
 		});
 	});
 
@@ -2386,7 +2387,7 @@ describe('AgentInbox', () => {
 			expect(screen.queryByTestId('maximize2-icon')).toBeNull();
 		});
 
-		it('uses w-[780px] class in normal mode', () => {
+		it('uses 780px width in normal mode', () => {
 			render(
 				<AgentInbox
 					theme={theme}
@@ -2396,11 +2397,10 @@ describe('AgentInbox', () => {
 				/>
 			);
 			const dialog = screen.getByRole('dialog');
-			expect(dialog.className).toContain('w-[780px]');
-			expect(dialog.className).not.toContain('w-[1200px]');
+			expect(dialog.style.width).toBe('780px');
 		});
 
-		it('uses w-[1200px] max-w-[95vw] class in expanded mode', () => {
+		it('uses expanded width (min(90vw, 1200)) in expanded mode', () => {
 			render(
 				<AgentInbox
 					theme={theme}
@@ -2411,9 +2411,9 @@ describe('AgentInbox', () => {
 			);
 			fireEvent.click(screen.getByTitle('Expand'));
 			const dialog = screen.getByRole('dialog');
-			expect(dialog.className).toContain('w-[1200px]');
-			expect(dialog.className).toContain('max-w-[95vw]');
-			expect(dialog.className).not.toContain('w-[780px]');
+			const expectedWidth = Math.min(window.innerWidth * 0.9, 1200);
+			expect(dialog.style.width).toBe(`${expectedWidth}px`);
+			expect(dialog.style.maxWidth).toBe('95vw');
 		});
 
 		it('sets maxHeight to 80vh in normal mode and 90vh in expanded mode', () => {
@@ -2456,11 +2456,11 @@ describe('AgentInbox', () => {
 			);
 			// Expand
 			fireEvent.click(screen.getByTitle('Expand'));
-			expect(screen.getByRole('dialog').className).toContain('w-[1200px]');
+			const expandedWidth = Math.min(window.innerWidth * 0.9, 1200);
+			expect(screen.getByRole('dialog').style.width).toBe(`${expandedWidth}px`);
 			// Collapse
 			fireEvent.click(screen.getByTitle('Collapse'));
-			expect(screen.getByRole('dialog').className).toContain('w-[780px]');
-			expect(screen.getByRole('dialog').className).not.toContain('w-[1200px]');
+			expect(screen.getByRole('dialog').style.width).toBe('780px');
 		});
 
 		it('expand button uses same p-1.5 rounded pattern as close button', () => {
