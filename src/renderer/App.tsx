@@ -914,20 +914,16 @@ function MaestroConsoleInner() {
 	const handleCloseProcessMonitor = useCallback(() => setProcessMonitorOpen(false), []);
 	const handleCloseAgentInbox = useCallback(() => setAgentInboxOpen(false), []);
 
-	// Agent Inbox: Quick Reply — sends directly to PTY, stays in modal
+	// Agent Inbox: Quick Reply — directly sends text via processInputRef to avoid stale inputValue
 	const handleQuickReply = useCallback(
 		(sessionId: string, tabId: string, text: string) => {
-			// Write directly to the agent's PTY stdin (compound key: sessionId-ai-tabId)
-			window.maestro.process.write(`${sessionId}-ai-${tabId}`, text + '\n').catch((err) => {
-				console.error('Quick reply failed:', err);
-			});
-
-			// Add a user log entry for immediate UI feedback
+			// Add optimistic user log entry for immediate UI feedback
 			setSessions((prev) =>
 				prev.map((s) => {
 					if (s.id !== sessionId) return s;
 					return {
 						...s,
+						activeTabId: tabId,
 						aiTabs: s.aiTabs.map((t) => {
 							if (t.id !== tabId) return t;
 							return {
@@ -947,8 +943,15 @@ function MaestroConsoleInner() {
 					};
 				})
 			);
+
+			// Activate the session, then send the text directly via processInputRef
+			// The text parameter maps to overrideInputValue, bypassing the hook's local inputValue state
+			setActiveSessionId(sessionId);
+			setTimeout(() => {
+				processInputRef.current(text);
+			}, 150);
 		},
-		[setSessions]
+		[setSessions, setActiveSessionId]
 	);
 
 	// Agent Inbox: Open & Reply — navigates to session with pre-filled input
@@ -985,9 +988,7 @@ function MaestroConsoleInner() {
 					if (s.id !== sessionId) return s;
 					return {
 						...s,
-						aiTabs: s.aiTabs.map((t) =>
-							t.id === tabId ? { ...t, hasUnread: false } : t
-						),
+						aiTabs: s.aiTabs.map((t) => (t.id === tabId ? { ...t, hasUnread: false } : t)),
 					};
 				})
 			);
@@ -1249,7 +1250,10 @@ function MaestroConsoleInner() {
 
 			// Migration: default autoRunFolderPath for sessions that don't have one
 			if (!session.autoRunFolderPath && session.projectRoot) {
-				session = { ...session, autoRunFolderPath: `${session.projectRoot}/${AUTO_RUN_FOLDER_NAME}` };
+				session = {
+					...session,
+					autoRunFolderPath: `${session.projectRoot}/${AUTO_RUN_FOLDER_NAME}`,
+				};
 			}
 
 			// Migration: ensure fileTreeAutoRefreshInterval is set (default 180s for legacy sessions)
@@ -6280,9 +6284,10 @@ You are taking over this conversation. Based on the context above, provide a bri
 		);
 
 		// Trigger the send after a short delay to ensure state is settled
-		// The inputValue and pendingMergedContext are already set on the tab
+		// Pass the tab's inputValue directly to avoid stale hook state
+		const tabInputValue = activeTab.inputValue;
 		setTimeout(() => {
-			processInput();
+			processInputRef.current(tabInputValue);
 		}, 100);
 	}, [activeSession?.id, activeSession?.activeTabId]);
 
@@ -7284,13 +7289,18 @@ You are taking over this conversation. Based on the context above, provide a bri
 					const tab = s.aiTabs.find((t) => t.id === renameTabId);
 					const oldName = tab?.name;
 
-					window.maestro.logger.log('info', `Tab renamed: "${oldName || '(auto)'}" → "${newName || '(cleared)'}"`, 'TabNaming', {
-						tabId: renameTabId,
-						sessionId: activeSession.id,
-						agentSessionId: tab?.agentSessionId,
-						oldName,
-						newName: newName || null,
-					});
+					window.maestro.logger.log(
+						'info',
+						`Tab renamed: "${oldName || '(auto)'}" → "${newName || '(cleared)'}"`,
+						'TabNaming',
+						{
+							tabId: renameTabId,
+							sessionId: activeSession.id,
+							agentSessionId: tab?.agentSessionId,
+							oldName,
+							newName: newName || null,
+						}
+					);
 
 					if (tab?.agentSessionId) {
 						// Persist name to agent session metadata (async, fire and forget)
@@ -7300,37 +7310,57 @@ You are taking over this conversation. Based on the context above, provide a bri
 							window.maestro.claude
 								.updateSessionName(s.projectRoot, tab.agentSessionId, newName || '')
 								.catch((err) => {
-									window.maestro.logger.log('error', 'Failed to persist tab name to Claude session storage', 'TabNaming', {
-										tabId: renameTabId,
-										agentSessionId: tab.agentSessionId,
-										error: String(err),
-									});
+									window.maestro.logger.log(
+										'error',
+										'Failed to persist tab name to Claude session storage',
+										'TabNaming',
+										{
+											tabId: renameTabId,
+											agentSessionId: tab.agentSessionId,
+											error: String(err),
+										}
+									);
 								});
 						} else {
 							window.maestro.agentSessions
 								.setSessionName(agentId, s.projectRoot, tab.agentSessionId, newName || null)
 								.catch((err) => {
-									window.maestro.logger.log('error', 'Failed to persist tab name to agent session storage', 'TabNaming', {
-										tabId: renameTabId,
-										agentSessionId: tab.agentSessionId,
-										agentType: agentId,
-										error: String(err),
-									});
+									window.maestro.logger.log(
+										'error',
+										'Failed to persist tab name to agent session storage',
+										'TabNaming',
+										{
+											tabId: renameTabId,
+											agentSessionId: tab.agentSessionId,
+											agentType: agentId,
+											error: String(err),
+										}
+									);
 								});
 						}
 						// Also update past history entries with this agentSessionId
 						window.maestro.history
 							.updateSessionName(tab.agentSessionId, newName || '')
 							.catch((err) => {
-								window.maestro.logger.log('warn', 'Failed to update history session names', 'TabNaming', {
-									agentSessionId: tab.agentSessionId,
-									error: String(err),
-								});
+								window.maestro.logger.log(
+									'warn',
+									'Failed to update history session names',
+									'TabNaming',
+									{
+										agentSessionId: tab.agentSessionId,
+										error: String(err),
+									}
+								);
 							});
 					} else {
-						window.maestro.logger.log('info', 'Tab renamed (no agentSessionId, skipping persistence)', 'TabNaming', {
-							tabId: renameTabId,
-						});
+						window.maestro.logger.log(
+							'info',
+							'Tab renamed (no agentSessionId, skipping persistence)',
+							'TabNaming',
+							{
+								tabId: renameTabId,
+							}
+						);
 					}
 					return {
 						...s,
@@ -9509,15 +9539,27 @@ You are taking over this conversation. Based on the context above, provide a bri
 		if (slashCommandOpen) {
 			const isTerminalMode = activeSession?.inputMode === 'terminal';
 			const searchTerm = inputValue.toLowerCase().replace(/^\//, '');
-			const scored: { cmd: typeof allSlashCommands[number]; score: number }[] = [];
+			const scored: { cmd: (typeof allSlashCommands)[number]; score: number }[] = [];
 			for (const cmd of allSlashCommands) {
 				if ('terminalOnly' in cmd && cmd.terminalOnly && !isTerminalMode) continue;
 				if ('aiOnly' in cmd && cmd.aiOnly && isTerminalMode) continue;
-				if (!searchTerm) { scored.push({ cmd, score: 0 }); continue; }
+				if (!searchTerm) {
+					scored.push({ cmd, score: 0 });
+					continue;
+				}
 				const cmdName = cmd.command.toLowerCase().replace(/^\//, '');
-				if (cmdName.startsWith(searchTerm)) { scored.push({ cmd, score: 3 }); continue; }
-				if (cmdName.includes(searchTerm)) { scored.push({ cmd, score: 2 }); continue; }
-				if (cmd.description && cmd.description.toLowerCase().includes(searchTerm)) { scored.push({ cmd, score: 1 }); continue; }
+				if (cmdName.startsWith(searchTerm)) {
+					scored.push({ cmd, score: 3 });
+					continue;
+				}
+				if (cmdName.includes(searchTerm)) {
+					scored.push({ cmd, score: 2 });
+					continue;
+				}
+				if (cmd.description && cmd.description.toLowerCase().includes(searchTerm)) {
+					scored.push({ cmd, score: 1 });
+					continue;
+				}
 			}
 			scored.sort((a, b) => b.score - a.score);
 			const filteredCommands = scored.map((s) => s.cmd);
@@ -11857,6 +11899,7 @@ You are taking over this conversation. Based on the context above, provide a bri
 					onNavigateToGroupChat={handleProcessMonitorNavigateToGroupChat}
 					agentInboxOpen={agentInboxOpen}
 					onCloseAgentInbox={handleCloseAgentInbox}
+					enterToSendAI={enterToSendAI}
 					onQuickReply={handleQuickReply}
 					onOpenAndReply={handleOpenAndReply}
 					onMarkAsRead={handleMarkAsRead}
