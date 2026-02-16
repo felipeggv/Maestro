@@ -691,11 +691,32 @@ export default function InboxListView({
 		}
 	}, [sortMode, filterMode, rows]);
 
-	// Sync selectedRowIndex → parent's selectedIndex (item-index for Focus Mode)
+	// Sync selectedRowIndex -> parent selectedIndex (used by Focus Mode entry)
 	useEffect(() => {
 		const row = rows[selectedRowIndex];
-		if (row && row.type === 'item') {
+		if (!row) return;
+
+		if (row.type === 'item') {
 			setSelectedIndex(row.index);
+			return;
+		}
+
+		// Header selected — find nearest item below, then above
+		for (let i = selectedRowIndex + 1; i < rows.length; i++) {
+			const r = rows[i];
+			if (r.type === 'header') break; // hit next group, stop
+			if (r.type === 'item') {
+				setSelectedIndex(r.index);
+				return;
+			}
+		}
+		// No item below in same group — search upward
+		for (let i = selectedRowIndex - 1; i >= 0; i--) {
+			const r = rows[i];
+			if (r.type === 'item') {
+				setSelectedIndex(r.index);
+				return;
+			}
 		}
 	}, [selectedRowIndex, rows, setSelectedIndex]);
 

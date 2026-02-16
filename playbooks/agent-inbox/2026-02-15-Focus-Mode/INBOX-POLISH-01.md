@@ -144,7 +144,7 @@ The clamp effect at line 606 only handles `selectedRowIndex >= rows.length` (out
 
 ---
 
-- [ ] Invoke `/AIOS:agents:dev` to fix header-to-parent sync. Make this change in `src/renderer/components/AgentInbox/InboxListView.tsx`:
+- [x] Invoke `/AIOS:agents:dev` to fix header-to-parent sync. Make this change in `src/renderer/components/AgentInbox/InboxListView.tsx`:
 
   **Replace the parent sync effect at lines 641-646:**
 
