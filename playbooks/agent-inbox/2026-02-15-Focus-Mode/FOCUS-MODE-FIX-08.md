@@ -94,8 +94,23 @@ The `FocusSidebar` component in `FocusModeView.tsx` (~line 298) groups items by 
   > - `lastMessage` grep on `FocusModeView.tsx`: **0 matches** — fully removed from sidebar item rendering
   > - No icon mock fixes needed — all mocks were already in place
 
-- [ ] **Invoke `/AIOS:agents:analyst` to review.** The analyst must:
+- [x] **Invoke `/AIOS:agents:analyst` to review.** The analyst must:
   1. Read the `FocusSidebar` component in `FocusModeView.tsx`.
   2. Verify the collapse toggle doesn't interfere with the `currentIndex` navigation (i.e., collapsing a group that contains the current item should still highlight correctly when expanded).
   3. Check: does clicking a group header propagate the click event to parent handlers? Ensure `e.stopPropagation()` is not needed here.
   4. Report findings — no code changes unless a critical issue is found.
+
+  > **Analyst Review (2026-02-16):**
+  >
+  > **Finding 1 — Collapse vs currentIndex navigation: NO CRITICAL ISSUE**
+  > - `currentIndex` operates on the flat `items[]` array, independent of collapse state. When a group containing the current item is collapsed, the highlight disappears (the DOM node is not rendered). When expanded again, `isCurrent` re-evaluates correctly and the highlight returns.
+  > - Minor edge: `scrollIntoView` (useEffect on `currentIndex`) won't fire on re-expand since `currentIndex` hasn't changed. The item might be off-screen until the user navigates. This matches standard IDE file-tree UX and is acceptable.
+  > - Prev/Next navigation (footer buttons + keyboard ⌘←→) operates on `items[]` indices directly and is unaffected by collapse state.
+  >
+  > **Finding 2 — Click propagation: NO ISSUE, `e.stopPropagation()` NOT NEEDED**
+  > - Parent containers of the group header (`<div className="flex-1 overflow-y-auto">`, sidebar wrapper, etc.) have no `onClick` handlers. Event propagation cannot trigger unintended side effects.
+  >
+  > **Finding 3 — Minor pre-existing issue (NOT from this PR)**
+  > - Group count badge (line 429) uses `items.filter(i => i.sessionName === row.groupName).length`. When `sortMode === 'grouped'`, the header's `groupName` comes from `itm.groupName ?? 'Ungrouped'`, not `sessionName`. If these differ, the count would be wrong. This is a pre-existing issue unrelated to the collapsible groups change — no action required in this fix.
+  >
+  > **Verdict: PASS — no code changes needed.**
