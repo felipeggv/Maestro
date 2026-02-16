@@ -211,7 +211,7 @@ Both should use a "visible item index" (a counter that only increments for visib
 
 ---
 
-- [ ] Invoke `/AIOS:agents:dev` to fix Cmd+N badge/navigation mismatch. Make these changes in `src/renderer/components/AgentInbox/InboxListView.tsx`:
+- [x] Invoke `/AIOS:agents:dev` to fix Cmd+N badge/navigation mismatch. Make these changes in `src/renderer/components/AgentInbox/InboxListView.tsx`:
 
   **Step 1: Add a visibleItemIndex map.** Insert this `useMemo` right after the `rows` memo (after line 587):
 

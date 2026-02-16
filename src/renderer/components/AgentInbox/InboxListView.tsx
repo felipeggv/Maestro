@@ -366,6 +366,7 @@ interface RowExtraProps {
 	collapsedGroups: Set<string>;
 	onToggleGroup: (groupName: string) => void;
 	sortMode: InboxSortMode;
+	visibleItemNumbers: Map<number, number>;
 }
 
 function InboxRow({
@@ -378,6 +379,7 @@ function InboxRow({
 	collapsedGroups,
 	onToggleGroup,
 	sortMode,
+	visibleItemNumbers,
 }: {
 	ariaAttributes: { 'aria-posinset': number; 'aria-setsize': number; role: 'listitem' };
 	index: number;
@@ -456,8 +458,9 @@ function InboxRow({
 	}
 
 	const isLastRow = index === rows.length - 1;
-	const showNumber = row.index >= 0 && row.index < 10;
-	const numberBadge = row.index === 9 ? 0 : row.index + 1;
+	const visibleNum = visibleItemNumbers.get(index);
+	const showNumber = visibleNum !== undefined && visibleNum >= 1 && visibleNum <= 10;
+	const numberBadge = visibleNum === 10 ? 0 : visibleNum;
 
 	return (
 		<div
@@ -588,6 +591,22 @@ export default function InboxListView({
 			return !collapsedGroups.has(collapseKey);
 		});
 	}, [allRows, collapsedGroups, sortMode]);
+
+	// Map from row index to visible-item-number (1-based, only for item rows)
+	// Also build reverse map: visibleItemNumber -> row index (for Cmd+N)
+	const { visibleItemNumbers, visibleItemByNumber } = useMemo(() => {
+		const numbers = new Map<number, number>(); // rowIndex -> 1-based visible number
+		const byNumber = new Map<number, number>(); // 1-based visible number -> rowIndex
+		let counter = 0;
+		for (let i = 0; i < rows.length; i++) {
+			if (rows[i].type === 'item') {
+				counter++;
+				numbers.set(i, counter);
+				byNumber.set(counter, i);
+			}
+		}
+		return { visibleItemNumbers: numbers, visibleItemByNumber: byNumber };
+	}, [rows]);
 
 	// ============================================================================
 	// Row-based navigation — navigates over rows (headers + items), no useListNavigation
@@ -830,13 +849,16 @@ export default function InboxListView({
 				return;
 			}
 
-			// Cmd/Ctrl+1-9, 0 hotkeys for quick select (item-index based)
+			// Cmd/Ctrl+1-9, 0 hotkeys for quick select (visible-item based)
 			if ((e.metaKey || e.ctrlKey) && ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].includes(e.key)) {
 				e.preventDefault();
 				const number = e.key === '0' ? 10 : parseInt(e.key);
-				const targetItemIndex = number - 1;
-				if (targetItemIndex >= 0 && targetItemIndex < items.length) {
-					handleNavigate(items[targetItemIndex]);
+				const targetRowIndex = visibleItemByNumber.get(number);
+				if (targetRowIndex !== undefined) {
+					const targetRow = rows[targetRowIndex];
+					if (targetRow && targetRow.type === 'item') {
+						handleNavigate(targetRow.item);
+					}
 				}
 				return;
 			}
@@ -847,7 +869,7 @@ export default function InboxListView({
 			rows,
 			selectedRowIndex,
 			sortMode,
-			items,
+			visibleItemByNumber,
 			toggleGroup,
 			handleNavigate,
 		]
@@ -881,8 +903,9 @@ export default function InboxListView({
 			collapsedGroups,
 			onToggleGroup: toggleGroup,
 			sortMode,
+			visibleItemNumbers,
 		}),
-		[rows, theme, selectedRowIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode]
+		[rows, theme, selectedRowIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode, visibleItemNumbers]
 	);
 
 	// Calculate list height
