@@ -87,6 +87,11 @@ vi.mock('lucide-react', () => ({
 			🧠
 		</span>
 	),
+	Pin: ({ className }: { className?: string }) => (
+		<span data-testid="pin-icon" className={className}>
+			📌
+		</span>
+	),
 	FileText: ({ className }: { className?: string }) => (
 		<span data-testid="file-text-icon" className={className}>
 			📄

@@ -11,9 +11,10 @@ import {
 	ChevronDown,
 	Eye,
 	Brain,
+	Pin,
 	FileText,
 } from 'lucide-react';
-import type { Theme, Session, LogEntry } from '../../types';
+import type { Theme, Session, LogEntry, ThinkingMode } from '../../types';
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
 import { resolveContextUsageColor } from './InboxListView';
@@ -536,8 +537,16 @@ export default function FocusModeView({
 	// Session existence check (session may be deleted while focus mode is open)
 	const sessionExists = sessions.some((s) => s.id === item.sessionId);
 
-	// ---- Thinking toggle state ----
-	const [showThinking, setShowThinking] = useState(false);
+	// ---- Thinking toggle state (3-state: off → on → sticky → off) ----
+	const [showThinking, setShowThinking] = useState<ThinkingMode>('off');
+
+	const cycleThinking = useCallback(() => {
+		setShowThinking((current) => {
+			if (current === 'off') return 'on';
+			if (current === 'on') return 'sticky';
+			return 'off';
+		});
+	}, []);
 
 	// ---- Raw markdown toggle (per-session, not per-log) ----
 	const [showRawMarkdown, setShowRawMarkdown] = useState(false);
@@ -563,7 +572,7 @@ export default function FocusModeView({
 
 	// Filter out thinking/tool when toggle is off
 	const visibleLogs = useMemo(() => {
-		if (showThinking) return logs;
+		if (showThinking !== 'off') return logs;
 		return logs.filter((log) => log.source !== 'thinking' && log.source !== 'tool');
 	}, [logs, showThinking]);
 
@@ -766,19 +775,43 @@ export default function FocusModeView({
 				>
 					{STATUS_LABELS[item.state]}
 				</span>
-				{/* Thinking toggle pill */}
+				{/* Thinking toggle — 3-state: off → on → sticky → off */}
 				<button
-					onClick={() => setShowThinking((v) => !v)}
-					className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full cursor-pointer transition-colors"
+					onClick={cycleThinking}
+					className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full cursor-pointer transition-all ${
+						showThinking !== 'off' ? '' : 'opacity-40 hover:opacity-70'
+					}`}
 					style={{
-						backgroundColor: showThinking ? `${theme.colors.accent}20` : 'transparent',
-						color: showThinking ? theme.colors.accent : theme.colors.textDim,
-						border: `1px solid ${showThinking ? theme.colors.accent + '40' : theme.colors.border}`,
+						backgroundColor:
+							showThinking === 'sticky'
+								? `${theme.colors.warning}30`
+								: showThinking === 'on'
+									? `${theme.colors.accentText}25`
+									: 'transparent',
+						color:
+							showThinking === 'sticky'
+								? theme.colors.warning
+								: showThinking === 'on'
+									? theme.colors.accentText
+									: theme.colors.textDim,
+						border:
+							showThinking === 'sticky'
+								? `1px solid ${theme.colors.warning}50`
+								: showThinking === 'on'
+									? `1px solid ${theme.colors.accentText}50`
+									: '1px solid transparent',
 					}}
-					title={showThinking ? 'Hide thinking & tools' : 'Show thinking & tools'}
+					title={
+						showThinking === 'off'
+							? 'Show Thinking - Click to stream AI reasoning'
+							: showThinking === 'on'
+								? 'Thinking (temporary) - Click for sticky mode'
+								: 'Thinking (sticky) - Click to turn off'
+					}
 				>
 					<Brain className="w-3 h-3" />
-					Thinking
+					<span>Thinking</span>
+					{showThinking === 'sticky' && <Pin className="w-2.5 h-2.5" />}
 				</button>
 			</div>
 

@@ -72,6 +72,11 @@ vi.mock('lucide-react', () => ({
 			🧠
 		</span>
 	),
+	Pin: ({ className }: { className?: string }) => (
+		<span data-testid="pin-icon" className={className}>
+			📌
+		</span>
+	),
 	FileText: ({ className }: { className?: string }) => (
 		<span data-testid="file-text-icon" className={className}>
 			📄
@@ -321,7 +326,7 @@ describe('FocusModeView (conversation)', () => {
 			sessions: [createSession('s1', 't1', logs)],
 		});
 		// Click thinking toggle button
-		const toggleButton = screen.getByTitle('Show thinking & tools');
+		const toggleButton = screen.getByTitle('Show Thinking - Click to stream AI reasoning');
 		fireEvent.click(toggleButton);
 
 		expect(screen.getByText('Thinking visible')).toBeDefined();
@@ -374,7 +379,7 @@ describe('FocusModeView (conversation)', () => {
 			sessions: [createSession('s1', 't1', logs)],
 		});
 		// Enable thinking toggle first
-		const toggleButton = screen.getByTitle('Show thinking & tools');
+		const toggleButton = screen.getByTitle('Show Thinking - Click to stream AI reasoning');
 		fireEvent.click(toggleButton);
 
 		expect(screen.getByText('thinking')).toBeDefined();
@@ -396,7 +401,7 @@ describe('FocusModeView (conversation)', () => {
 			sessions: [createSession('s1', 't1', logs)],
 		});
 		// Enable thinking toggle first
-		const toggleButton = screen.getByTitle('Show thinking & tools');
+		const toggleButton = screen.getByTitle('Show Thinking - Click to stream AI reasoning');
 		fireEvent.click(toggleButton);
 
 		expect(screen.getByText('Read')).toBeDefined();
@@ -651,16 +656,23 @@ describe('FocusModeView (ARIA)', () => {
 // Thinking toggle tests
 // ============================================================================
 describe('FocusModeView (thinking toggle)', () => {
-	it('31. renders thinking toggle button in subheader', () => {
+	it('31. renders thinking toggle button in subheader (off state)', () => {
 		renderFocusView();
-		expect(screen.getByTitle('Show thinking & tools')).toBeDefined();
+		expect(screen.getByTitle('Show Thinking - Click to stream AI reasoning')).toBeDefined();
 	});
 
-	it('32. toggles title text when clicked', () => {
+	it('32. cycles through 3 states: off → on → sticky → off', () => {
 		renderFocusView();
-		const toggle = screen.getByTitle('Show thinking & tools');
+		const toggle = screen.getByTitle('Show Thinking - Click to stream AI reasoning');
+		// off → on
 		fireEvent.click(toggle);
-		expect(screen.getByTitle('Hide thinking & tools')).toBeDefined();
+		expect(screen.getByTitle('Thinking (temporary) - Click for sticky mode')).toBeDefined();
+		// on → sticky
+		fireEvent.click(screen.getByTitle('Thinking (temporary) - Click for sticky mode'));
+		expect(screen.getByTitle('Thinking (sticky) - Click to turn off')).toBeDefined();
+		// sticky → off
+		fireEvent.click(screen.getByTitle('Thinking (sticky) - Click to turn off'));
+		expect(screen.getByTitle('Show Thinking - Click to stream AI reasoning')).toBeDefined();
 	});
 
 	it('33. thinking entries hidden by default, visible after toggle', () => {
@@ -673,15 +685,19 @@ describe('FocusModeView (thinking toggle)', () => {
 			sessions: [createSession('s1', 't1', logs)],
 		});
 
-		// Hidden by default
+		// Hidden by default (off)
 		expect(screen.queryByText('Internal reasoning')).toBeNull();
 
-		// Toggle on
-		fireEvent.click(screen.getByTitle('Show thinking & tools'));
+		// Click once: off → on — thinking visible
+		fireEvent.click(screen.getByTitle('Show Thinking - Click to stream AI reasoning'));
 		expect(screen.getByText('Internal reasoning')).toBeDefined();
 
-		// Toggle off again
-		fireEvent.click(screen.getByTitle('Hide thinking & tools'));
+		// Click again: on → sticky — still visible
+		fireEvent.click(screen.getByTitle('Thinking (temporary) - Click for sticky mode'));
+		expect(screen.getByText('Internal reasoning')).toBeDefined();
+
+		// Click again: sticky → off — hidden again
+		fireEvent.click(screen.getByTitle('Thinking (sticky) - Click to turn off'));
 		expect(screen.queryByText('Internal reasoning')).toBeNull();
 	});
 });
