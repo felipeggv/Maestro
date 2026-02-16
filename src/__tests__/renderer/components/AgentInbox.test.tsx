@@ -34,6 +34,24 @@ vi.mock('lucide-react', () => ({
 	Minimize2: ({ className }: { className?: string }) => (
 		<span data-testid="minimize2-icon" className={className}>⊟</span>
 	),
+	ArrowLeft: ({ style }: { style?: React.CSSProperties }) => (
+		<span data-testid="arrow-left-icon" style={style}>←</span>
+	),
+	Bot: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+		<span data-testid="bot-icon" className={className} style={style}>🤖</span>
+	),
+	User: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+		<span data-testid="user-icon" className={className} style={style}>👤</span>
+	),
+	ArrowUp: ({ className }: { className?: string }) => (
+		<span data-testid="arrow-up-icon" className={className}>↑</span>
+	),
+	ExternalLink: ({ className }: { className?: string }) => (
+		<span data-testid="external-link-icon" className={className}>↗</span>
+	),
+	ChevronLeft: ({ className }: { className?: string }) => (
+		<span data-testid="chevron-left-icon" className={className}>‹</span>
+	),
 }));
 
 // Mock layer stack context
@@ -3046,6 +3064,145 @@ describe('AgentInbox', () => {
 			expect(closeBtn.style.backgroundColor).toBe('rgba(189, 147, 249, 0.125)');
 			fireEvent.mouseLeave(closeBtn);
 			expect(closeBtn.style.backgroundColor).toBe('transparent');
+		});
+	});
+
+	// ==========================================================================
+	// Focus Mode (viewMode switching)
+	// ==========================================================================
+	describe('Focus Mode', () => {
+		it('starts in list view mode', () => {
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={[]}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			expect(screen.getByText('Unified Inbox')).toBeTruthy();
+		});
+
+		it('enters focus mode when F key is pressed', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			fireEvent.keyDown(dialog, { key: 'f' });
+			// Focus mode shows back button with "Inbox" text
+			expect(screen.getByText('Inbox')).toBeTruthy();
+		});
+
+		it('exits focus mode on Escape', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			// Enter focus mode
+			fireEvent.keyDown(dialog, { key: 'f' });
+			expect(screen.getByText('Inbox')).toBeTruthy();
+			// Exit focus mode
+			fireEvent.keyDown(dialog, { key: 'Escape' });
+			expect(screen.getByText('Unified Inbox')).toBeTruthy();
+		});
+
+		it('does not close modal on Escape in focus mode', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			// Enter focus mode
+			fireEvent.keyDown(dialog, { key: 'f' });
+			// Press Escape in focus mode — should NOT close modal
+			fireEvent.keyDown(dialog, { key: 'Escape' });
+			// onClose should NOT have been called
+			expect(onClose).not.toHaveBeenCalled();
+			// Should be back in list view
+			expect(screen.getByText('Unified Inbox')).toBeTruthy();
+		});
+
+		it('ArrowLeft navigates to previous item in focus mode', () => {
+			const sessions = [
+				createInboxSession('s1', 't1'),
+				createInboxSession('s2', 't2'),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			// Enter focus mode
+			fireEvent.keyDown(dialog, { key: 'f' });
+			// Should show "1 / 2" initially
+			expect(screen.getByText('1 / 2')).toBeTruthy();
+			// Navigate with ArrowLeft (wraps around)
+			fireEvent.keyDown(dialog, { key: 'ArrowLeft' });
+			// Should now be "2 / 2"
+			expect(screen.getByText('2 / 2')).toBeTruthy();
+		});
+
+		it('ArrowRight navigates to next item in focus mode', () => {
+			const sessions = [
+				createInboxSession('s1', 't1'),
+				createInboxSession('s2', 't2'),
+			];
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			// Enter focus mode
+			fireEvent.keyDown(dialog, { key: 'f' });
+			expect(screen.getByText('1 / 2')).toBeTruthy();
+			// Navigate with ArrowRight
+			fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+			expect(screen.getByText('2 / 2')).toBeTruthy();
+		});
+
+		it('M key marks as read in focus mode', () => {
+			const sessions = [createInboxSession('s1', 't1')];
+			const onMarkAsRead = vi.fn();
+			render(
+				<AgentInbox
+					theme={theme}
+					sessions={sessions}
+					groups={[]}
+					onClose={onClose}
+					onMarkAsRead={onMarkAsRead}
+				/>
+			);
+			const dialog = screen.getByRole('dialog');
+			// Enter focus mode
+			fireEvent.keyDown(dialog, { key: 'f' });
+			// Press M to mark as read
+			fireEvent.keyDown(dialog, { key: 'm' });
+			expect(onMarkAsRead).toHaveBeenCalledWith('s1', 't1');
 		});
 	});
 });
