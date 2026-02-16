@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import InboxListView from './InboxListView';
+import FocusModeView from './FocusModeView';
 import type { Theme, Session, Group } from '../../types';
-import type { InboxItem, InboxViewMode } from '../../types/agent-inbox';
+import type { InboxItem, InboxViewMode, InboxFilterMode, InboxSortMode } from '../../types/agent-inbox';
 import { useModalLayer } from '../../hooks/ui/useModalLayer';
 import { MODAL_PRIORITIES } from '../../constants/modalPriorities';
 import { useModalStore, selectModalData } from '../../stores/modalStore';
+import { useAgentInbox } from '../../hooks/useAgentInbox';
 
 // Re-export so existing test imports don't break
 export { resolveContextUsageColor } from './InboxListView';
@@ -48,15 +50,28 @@ export default function AgentInbox({
 
 	// ---- View mode state ----
 	const [viewMode, setViewMode] = useState<InboxViewMode>('list');
-	const [_focusItem, setFocusItem] = useState<InboxItem | null>(null);
+	const [focusIndex, setFocusIndex] = useState(0);
 
-	const handleEnterFocus = useCallback((item: InboxItem) => {
-		setFocusItem(item);
-		setViewMode('focus');
-	}, []);
+	// ---- Filter/sort state (lifted from InboxListView for shared access) ----
+	const inboxData = useModalStore(selectModalData('agentInbox'));
+	const [filterMode, setFilterMode] = useState<InboxFilterMode>(inboxData?.filterMode ?? 'unread');
+	const [sortMode, setSortMode] = useState<InboxSortMode>(inboxData?.sortMode ?? 'newest');
+
+	// ---- Compute items at the shell level ----
+	const items = useAgentInbox(sessions, groups, filterMode, sortMode);
+
+	const handleEnterFocus = useCallback(
+		(item: InboxItem) => {
+			const idx = items.findIndex(
+				(i) => i.sessionId === item.sessionId && i.tabId === item.tabId
+			);
+			setFocusIndex(idx >= 0 ? idx : 0);
+			setViewMode('focus');
+		},
+		[items]
+	);
 
 	const handleExitFocus = useCallback(() => {
-		setFocusItem(null);
 		setViewMode('list');
 	}, []);
 
@@ -75,7 +90,6 @@ export default function AgentInbox({
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// ---- Expanded state (lifted to shell for dialog width control) ----
-	const inboxData = useModalStore(selectModalData('agentInbox'));
 	const [isExpanded, setIsExpanded] = useState(inboxData?.isExpanded ?? false);
 
 	// ---- Keyboard handler ref from InboxListView ----
@@ -119,8 +133,11 @@ export default function AgentInbox({
 				{viewMode === 'list' ? (
 					<InboxListView
 						theme={theme}
-						sessions={sessions}
-						groups={groups}
+						items={items}
+						filterMode={filterMode}
+						setFilterMode={setFilterMode}
+						sortMode={sortMode}
+						setSortMode={setSortMode}
 						onClose={handleClose}
 						onNavigateToSession={onNavigateToSession}
 						onEnterFocus={handleEnterFocus}
@@ -129,9 +146,21 @@ export default function AgentInbox({
 						isExpanded={isExpanded}
 						onToggleExpanded={setIsExpanded}
 					/>
+				) : items[focusIndex] ? (
+					<FocusModeView
+						theme={theme}
+						item={items[focusIndex]}
+						items={items}
+						sessions={sessions}
+						currentIndex={focusIndex}
+						onClose={handleClose}
+						onExitFocus={handleExitFocus}
+						onNavigateItem={setFocusIndex}
+						onNavigateToSession={onNavigateToSession}
+					/>
 				) : (
 					<div style={{ color: theme.colors.textDim, padding: 40, textAlign: 'center' }}>
-						Focus Mode placeholder — Phase 02
+						No items to focus on
 					</div>
 				)}
 			</div>

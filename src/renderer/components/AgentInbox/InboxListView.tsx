@@ -1,19 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { List, type ListImperativeAPI } from 'react-window';
 import { X, CheckCircle, ChevronDown, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
-import type { Theme, Session, Group, SessionState } from '../../types';
+import type { Theme, SessionState } from '../../types';
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
-import { useAgentInbox } from '../../hooks/useAgentInbox';
 import { useListNavigation } from '../../hooks/keyboard/useListNavigation';
 import { formatRelativeTime } from '../../utils/formatters';
 import { formatShortcutKeys } from '../../utils/shortcutFormatter';
-import { useModalStore, selectModalData, getModalActions } from '../../stores/modalStore';
+import { getModalActions } from '../../stores/modalStore';
 
 interface InboxListViewProps {
 	theme: Theme;
-	sessions: Session[];
-	groups: Group[];
+	items: InboxItem[];
+	filterMode: InboxFilterMode;
+	setFilterMode: (mode: InboxFilterMode) => void;
+	sortMode: InboxSortMode;
+	setSortMode: (mode: InboxSortMode) => void;
 	onClose: () => void;
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
 	onEnterFocus: (item: InboxItem) => void;
@@ -492,8 +494,11 @@ const FILTER_OPTIONS: { value: InboxFilterMode; label: string }[] = [
 
 export default function InboxListView({
 	theme,
-	sessions,
-	groups,
+	items,
+	filterMode,
+	setFilterMode,
+	sortMode,
+	setSortMode,
 	onClose,
 	onNavigateToSession,
 	onEnterFocus,
@@ -502,10 +507,6 @@ export default function InboxListView({
 	isExpanded,
 	onToggleExpanded,
 }: InboxListViewProps) {
-	// Read persisted state from modalStore (survives open/close)
-	const inboxData = useModalStore(selectModalData('agentInbox'));
-	const [filterMode, setFilterMode] = useState<InboxFilterMode>(inboxData?.filterMode ?? 'unread');
-	const [sortMode, setSortMode] = useState<InboxSortMode>(inboxData?.sortMode ?? 'newest');
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
 	// Write state changes back to modalStore for persistence
@@ -525,8 +526,6 @@ export default function InboxListView({
 			return next;
 		});
 	}, []);
-
-	const items = useAgentInbox(sessions, groups, filterMode, sortMode);
 
 	// Auto-collapse zero-unread agents in byAgent mode
 	useEffect(() => {
