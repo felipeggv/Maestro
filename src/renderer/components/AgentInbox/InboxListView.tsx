@@ -18,6 +18,9 @@ interface InboxListViewProps {
 	onNavigateToSession?: (sessionId: string, tabId?: string) => void;
 	onEnterFocus: (item: InboxItem) => void;
 	containerRef: React.RefObject<HTMLDivElement | null>;
+	keyDownRef?: React.MutableRefObject<((e: React.KeyboardEvent) => void) | null>;
+	isExpanded: boolean;
+	onToggleExpanded: (expanded: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 const ITEM_HEIGHT = 120;
@@ -495,12 +498,14 @@ export default function InboxListView({
 	onNavigateToSession,
 	onEnterFocus,
 	containerRef,
+	keyDownRef,
+	isExpanded,
+	onToggleExpanded,
 }: InboxListViewProps) {
 	// Read persisted state from modalStore (survives open/close)
 	const inboxData = useModalStore(selectModalData('agentInbox'));
 	const [filterMode, setFilterMode] = useState<InboxFilterMode>(inboxData?.filterMode ?? 'unread');
 	const [sortMode, setSortMode] = useState<InboxSortMode>(inboxData?.sortMode ?? 'newest');
-	const [isExpanded, setIsExpanded] = useState(inboxData?.isExpanded ?? false);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
 	// Write state changes back to modalStore for persistence
@@ -671,6 +676,12 @@ export default function InboxListView({
 		[getHeaderFocusables, listHandleKeyDown, items, selectedIndex, onEnterFocus, containerRef]
 	);
 
+	// Expose keyboard handler to shell via ref
+	useEffect(() => {
+		if (keyDownRef) keyDownRef.current = handleKeyDown;
+		return () => { if (keyDownRef) keyDownRef.current = null; };
+	}, [keyDownRef, handleKeyDown]);
+
 	// Row height getter for variable-size rows
 	const getRowHeight = useCallback(
 		(index: number): number => {
@@ -740,7 +751,7 @@ export default function InboxListView({
 					</div>
 					<div className="flex items-center gap-1">
 						<button
-							onClick={() => setIsExpanded((prev) => !prev)}
+							onClick={() => onToggleExpanded((prev) => !prev)}
 							className="p-1.5 rounded"
 							style={{ color: theme.colors.textDim }}
 							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = `${theme.colors.accent}20`)}
@@ -795,7 +806,6 @@ export default function InboxListView({
 				aria-activedescendant={selectedItemId}
 				aria-label="Inbox items"
 				style={{ flex: 1, overflow: 'hidden' }}
-				onKeyDown={handleKeyDown}
 			>
 				{rows.length === 0 ? (
 					<div
