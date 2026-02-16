@@ -103,7 +103,7 @@ The official button is in `src/renderer/components/InputArea.tsx:1052-1092` and 
 
      **Note:** The official `InputArea.tsx` uses `theme.colors.accentText` for the 'on' state. Check if `accentText` exists in the theme type (`src/shared/themes.ts`). If it does, use it. If not, `theme.colors.accent` is the safe fallback.
 
-- [ ] **Invoke `/AIOS:agents:qa` to validate.** The QA agent must:
+- [x] **Invoke `/AIOS:agents:qa` to validate.** The QA agent must:
   1. Run `npx tsc --noEmit 2>&1 | head -20` — zero new errors.
   2. Run `npx vitest run src/__tests__/renderer/components/FocusModeView.test.tsx src/__tests__/renderer/components/AgentInbox.test.tsx 2>&1 | tail -15` — all tests passing.
   3. Add `Pin` to the lucide-react mock in BOTH test files (`FocusModeView.test.tsx` and `AgentInbox.test.tsx`):
@@ -114,6 +114,12 @@ The official button is in `src/renderer/components/InputArea.tsx:1052-1092` and 
      ```
   4. Update any test assertions that reference old thinking toggle titles (`'Hide thinking & tools'` / `'Show thinking & tools'`) to match the new 3-state titles.
   5. If tests fail, fix and re-run until green.
+
+  > **QA Result (2026-02-16):** All checks pass.
+  > - `tsc --noEmit`: 3 pre-existing TS6133 warnings (unused React imports in History components) — zero new errors from thinking toggle changes.
+  > - Vitest: 196/196 tests pass (48 FocusModeView + 148 AgentInbox).
+  > - `Pin` mock already present in both test files (FocusModeView.test.tsx:75, AgentInbox.test.tsx:90).
+  > - No old thinking toggle title references found — already updated to 3-state titles.
 
 - [ ] **Invoke `/AIOS:agents:analyst` to review.** The analyst must:
   1. Read the thinking toggle implementation in `FocusModeView.tsx`.
