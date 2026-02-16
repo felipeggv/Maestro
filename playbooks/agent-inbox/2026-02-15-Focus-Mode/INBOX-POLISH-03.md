@@ -105,7 +105,7 @@ all: { text: 'All caught up — no sessions need attention.', showIcon: true },
 
 ---
 
-- [ ] Invoke `/AIOS:agents:dev` to add double-click Focus Mode entry. All changes in `src/renderer/components/AgentInbox/InboxListView.tsx`:
+- [x] Invoke `/AIOS:agents:dev` to add double-click Focus Mode entry. All changes in `src/renderer/components/AgentInbox/InboxListView.tsx`:
 
   **Step 1: Add `onDoubleClick` prop to `InboxItemCardContent`.** Find the function signature (around line 99-108):
 

@@ -101,11 +101,13 @@ function InboxItemCardContent({
 	theme,
 	isSelected,
 	onClick,
+	onDoubleClick,
 }: {
 	item: InboxItem;
 	theme: Theme;
 	isSelected: boolean;
 	onClick: () => void;
+	onDoubleClick?: () => void;
 }) {
 	const statusColor = resolveStatusColor(item.state, theme);
 	const hasValidContext = item.contextUsage !== undefined && !isNaN(item.contextUsage);
@@ -120,6 +122,7 @@ function InboxItemCardContent({
 			id={`inbox-item-${item.sessionId}-${item.tabId}`}
 			tabIndex={isSelected ? 0 : -1}
 			onClick={onClick}
+			onDoubleClick={onDoubleClick}
 			style={{
 				height: ITEM_HEIGHT - 12,
 				borderRadius: 8,
@@ -378,6 +381,7 @@ interface RowExtraProps {
 	onToggleGroup: (groupName: string) => void;
 	sortMode: InboxSortMode;
 	visibleItemNumbers: Map<number, number>;
+	onEnterFocus: (item: InboxItem) => void;
 }
 
 function InboxRow({
@@ -391,6 +395,7 @@ function InboxRow({
 	onToggleGroup,
 	sortMode,
 	visibleItemNumbers,
+	onEnterFocus,
 }: {
 	ariaAttributes: { 'aria-posinset': number; 'aria-setsize': number; role: 'listitem' };
 	index: number;
@@ -506,6 +511,7 @@ function InboxRow({
 						theme={theme}
 						isSelected={isRowSelected}
 						onClick={() => onNavigate(row.item)}
+						onDoubleClick={() => onEnterFocus(row.item)}
 					/>
 				</div>
 			</div>
@@ -919,8 +925,9 @@ export default function InboxListView({
 			onToggleGroup: toggleGroup,
 			sortMode,
 			visibleItemNumbers,
+			onEnterFocus,
 		}),
-		[rows, theme, selectedRowIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode, visibleItemNumbers]
+		[rows, theme, selectedRowIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode, visibleItemNumbers, onEnterFocus]
 	);
 
 	// Calculate list height
