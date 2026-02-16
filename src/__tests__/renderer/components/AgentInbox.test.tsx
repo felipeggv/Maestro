@@ -2035,8 +2035,8 @@ describe('AgentInbox', () => {
 			];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			fireEvent.click(screen.getByText('By Agent'));
-			// The header should show "(claude-code)" after the agent name
-			expect(screen.getByText('(claude-code)')).toBeTruthy();
+			// The header should show the display name "(Claude Code)" after the agent name
+			expect(screen.getByText('(Claude Code)')).toBeTruthy();
 		});
 
 		it('byAgent headers show unread badge only when unreadCount > 0', () => {

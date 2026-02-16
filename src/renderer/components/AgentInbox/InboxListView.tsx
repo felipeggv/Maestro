@@ -356,6 +356,17 @@ function SegmentedControl<T extends string>({
 }
 
 // ============================================================================
+// Human-readable agent display names for group headers
+// ============================================================================
+const TOOL_TYPE_LABELS: Record<string, string> = {
+	'claude-code': 'Claude Code',
+	'codex': 'Codex',
+	'opencode': 'OpenCode',
+	'factory-droid': 'Factory Droid',
+	'terminal': 'Terminal',
+};
+
+// ============================================================================
 // Row component for react-window v2 List
 // ============================================================================
 interface RowExtraProps {
@@ -436,7 +447,7 @@ function InboxRow({
 					<span
 						style={{ fontSize: 11, color: theme.colors.textDim, fontWeight: 400, marginLeft: 4 }}
 					>
-						({agentToolType})
+						({TOOL_TYPE_LABELS[agentToolType] ?? agentToolType})
 					</span>
 				)}
 				{sortMode === 'byAgent' && unreadCount > 0 && (
