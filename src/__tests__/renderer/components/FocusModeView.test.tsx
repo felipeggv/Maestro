@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import FocusModeView from '../../../renderer/components/AgentInbox/FocusModeView';
-import type { Theme } from '../../../renderer/types';
+import type { Theme, Session } from '../../../renderer/types';
 import type { InboxItem } from '../../../renderer/types/agent-inbox';
 
 // Mock lucide-react icons
@@ -16,6 +16,12 @@ vi.mock('lucide-react', () => ({
 	),
 	X: ({ className }: { className?: string }) => (
 		<span data-testid="x-icon" className={className}>×</span>
+	),
+	Bot: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+		<span data-testid="bot-icon" className={className} style={style}>🤖</span>
+	),
+	User: ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+		<span data-testid="user-icon" className={className} style={style}>👤</span>
 	),
 }));
 
@@ -61,17 +67,26 @@ function createItem(overrides: Partial<InboxItem> = {}): InboxItem {
 	};
 }
 
-function renderFocusView(overrides: { items?: InboxItem[]; currentIndex?: number } = {}) {
+function createSession(sessionId: string, tabId: string, logs: any[] = []): Session {
+	return {
+		id: sessionId,
+		aiTabs: [{ id: tabId, logs }],
+	} as unknown as Session;
+}
+
+function renderFocusView(overrides: { items?: InboxItem[]; currentIndex?: number; sessions?: Session[] } = {}) {
 	const item = createItem();
 	const items = overrides.items ?? [item];
 	const currentIndex = overrides.currentIndex ?? 0;
+	const currentItem = items[currentIndex];
+	const sessions = overrides.sessions ?? [createSession(currentItem.sessionId, currentItem.tabId)];
 
 	return render(
 		<FocusModeView
 			theme={createTheme()}
-			item={items[currentIndex]}
+			item={currentItem}
 			items={items}
-			sessions={[]}
+			sessions={sessions}
 			currentIndex={currentIndex}
 			onClose={vi.fn()}
 			onExitFocus={vi.fn()}

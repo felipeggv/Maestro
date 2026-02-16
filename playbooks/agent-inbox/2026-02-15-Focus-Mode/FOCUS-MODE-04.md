@@ -11,6 +11,7 @@ This phase fills the FocusModeView body with the conversation tail — the last 
 ## Understand the Data Path
 
 Before implementing, trace the data flow:
+
 - `FocusModeView` receives `item: InboxItem` (has `sessionId`, `tabId`) and `sessions: Session[]`
 - To get logs: `sessions.find(s => s.id === item.sessionId)` → `session.aiTabs.find(t => t.id === item.tabId)` → `tab.logs`
 - `tab.logs` is `LogEntry[]` where each entry has `{ id, timestamp, source, text, ... }`
@@ -22,32 +23,38 @@ Before implementing, trace the data flow:
 
 ## Implement Conversation Tail
 
-- [ ] **Replace the placeholder body in `src/renderer/components/AgentInbox/FocusModeView.tsx` with a conversation tail renderer.** Changes:
-
+- [x] **Replace the placeholder body in `src/renderer/components/AgentInbox/FocusModeView.tsx` with a conversation tail renderer.** Changes:
   1. **Add constants:**
+
      ```ts
      const MAX_LOG_ENTRIES = 20;
-     const SOURCE_ICONS: Record<string, string> = {
-     	ai: '🤖',
-     	user: '👤',
-     };
      ```
 
-  2. **Compute the log entries** inside the component:
+  2. **Add imports for icons** — use lucide-react icons instead of emoji (consistent with codebase):
+
+     ```ts
+     import { ArrowLeft, X, Bot, User, ChevronLeft, ChevronRight } from 'lucide-react';
+     ```
+
+     `Bot` replaces the AI emoji, `User` replaces the human emoji.
+
+  3. **Compute the log entries** inside the component:
+
      ```ts
      const logs = useMemo(() => {
-     	const session = sessions.find(s => s.id === item.sessionId);
+     	const session = sessions.find((s) => s.id === item.sessionId);
      	if (!session) return [];
-     	const tab = session.aiTabs.find(t => t.id === item.tabId);
+     	const tab = session.aiTabs.find((t) => t.id === item.tabId);
      	if (!tab) return [];
      	// Filter to only show AI and user messages
-     	const relevant = tab.logs.filter(log => log.source === 'ai' || log.source === 'user');
+     	const relevant = tab.logs.filter((log) => log.source === 'ai' || log.source === 'user');
      	// Take last N entries
      	return relevant.slice(-MAX_LOG_ENTRIES);
      }, [sessions, item.sessionId, item.tabId]);
      ```
 
-  3. **Auto-scroll ref:**
+  4. **Auto-scroll ref:**
+
      ```ts
      const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -58,10 +65,13 @@ Before implementing, trace the data flow:
      }, [logs, item.sessionId, item.tabId]);
      ```
 
-  4. **Render the body:**
+  5. **Render the body** (keep `role="log"` and `aria-label` from Phase 02):
+
      ```tsx
      <div
      	ref={scrollRef}
+     	role="log"
+     	aria-label="Agent conversation"
      	className="flex-1 overflow-y-auto px-4 py-3"
      	style={{ minHeight: 0 }}
      >
@@ -82,11 +92,11 @@ Before implementing, trace the data flow:
      </div>
      ```
 
-  5. **Create the `LogBubble` sub-component** (inline in FocusModeView.tsx):
+  6. **Create the `LogBubble` sub-component** (inline in FocusModeView.tsx). Uses **lucide icons** (Bot/User), not emoji:
+
      ```tsx
      function LogBubble({ log, theme }: { log: LogEntry; theme: Theme }) {
      	const isAI = log.source === 'ai';
-     	const icon = SOURCE_ICONS[log.source] ?? '💬';
 
      	return (
      		<div
@@ -97,23 +107,23 @@ Before implementing, trace the data flow:
      		>
      			{/* Source icon */}
      			<div
-     				className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs"
+     				className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
      				style={{
-     					backgroundColor: isAI
-     						? `${theme.colors.accent}20`
-     						: `${theme.colors.success}20`,
+     					backgroundColor: isAI ? `${theme.colors.accent}20` : `${theme.colors.success}20`,
      				}}
      			>
-     				{icon}
+     				{isAI ? (
+     					<Bot className="w-3.5 h-3.5" style={{ color: theme.colors.accent }} />
+     				) : (
+     					<User className="w-3.5 h-3.5" style={{ color: theme.colors.success }} />
+     				)}
      			</div>
 
      			{/* Message content */}
      			<div
      				className="flex-1 rounded-lg px-3 py-2 text-sm"
      				style={{
-     					backgroundColor: isAI
-     						? `${theme.colors.bgActive}80`
-     						: `${theme.colors.accent}10`,
+     					backgroundColor: isAI ? `${theme.colors.bgActivity}80` : `${theme.colors.accent}10`,
      					color: theme.colors.textMain,
      					maxWidth: '85%',
      				}}
@@ -131,10 +141,7 @@ Before implementing, trace the data flow:
      				</div>
 
      				{/* Timestamp */}
-     				<div
-     					className="text-xs mt-1"
-     					style={{ color: theme.colors.textDim, opacity: 0.7 }}
-     				>
+     				<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
      					{formatRelativeTime(log.timestamp)}
      				</div>
      			</div>
@@ -143,7 +150,10 @@ Before implementing, trace the data flow:
      }
      ```
 
-  6. **Add `truncateLogText` helper** (inline):
+     **IMPORTANT:** The background color uses `theme.colors.bgActivity` (NOT `bgActive` — that token doesn't exist). This was a blocker (B3) from the review.
+
+  7. **Add `truncateLogText` helper** (inline):
+
      ```ts
      const MAX_LOG_TEXT_LENGTH = 500;
 
@@ -153,9 +163,9 @@ Before implementing, trace the data flow:
      }
      ```
 
-  7. **Import** `formatRelativeTime` from `../../utils/formatters` (same formatter used by InboxListView for timestamps).
+  8. **Import** `formatRelativeTime` from `../../utils/formatters` (same formatter used by InboxListView for timestamps).
 
-  8. **Import** `LogEntry` type from `../../types` (already exported).
+  9. **Import** `LogEntry` type from `../../types` (already exported).
 
   Run `npx tsc --noEmit` to verify.
 
@@ -165,16 +175,18 @@ Before implementing, trace the data flow:
 
 - [ ] **Ensure the conversation tail updates and scrolls when navigating between items.** The `logs` useMemo already depends on `item.sessionId` and `item.tabId`, so it will recompute. The scroll-to-bottom `useEffect` also depends on these, so it will auto-scroll. Verify this works by reviewing the dependency arrays. No code changes needed if deps are correct — just verify.
 
-  Also handle the edge case where `sessions.find()` returns undefined (session was deleted while focus mode is open):
+  Also handle the edge case where `sessions.find()` returns undefined (session was deleted while focus mode is open). Add an early check in the component body (before the log computation):
+
   ```ts
-  // In the body render, after logs computation:
-  if (!sessions.find(s => s.id === item.sessionId)) {
-  	return (
-  		<div className="flex-1 flex items-center justify-center" style={{ color: theme.colors.textDim }}>
-  			<span className="text-sm">Session no longer available</span>
-  		</div>
-  	);
-  }
+  const sessionExists = sessions.some((s) => s.id === item.sessionId);
+  ```
+
+  If `!sessionExists`, render:
+
+  ```tsx
+  <div className="flex-1 flex items-center justify-center" style={{ color: theme.colors.textDim }}>
+  	<span className="text-sm">Session no longer available</span>
+  </div>
   ```
 
   Run `npx tsc --noEmit` to verify.
@@ -187,7 +199,7 @@ Before implementing, trace the data flow:
   ```bash
   cd ~/Documents/Vibework/Maestro && npx tsc --noEmit && npx vitest run && npx eslint src/renderer/components/AgentInbox/ --ext .ts,.tsx
   ```
-  All tests must pass. No new tests in this phase (Phase 08 covers testing).
+  All tests must pass. No new tests in this phase (comprehensive testing in Phase 08).
 
 ---
 
@@ -196,5 +208,5 @@ Before implementing, trace the data flow:
 - [ ] **Commit this phase.**
   ```bash
   git add src/renderer/components/AgentInbox/FocusModeView.tsx
-  git commit -m "FOCUS-MODE: Phase 04 — conversation tail with LogBubble rendering"
+  git commit -m "FOCUS-MODE: Phase 04 — conversation tail with LogBubble rendering (lucide icons)"
   ```

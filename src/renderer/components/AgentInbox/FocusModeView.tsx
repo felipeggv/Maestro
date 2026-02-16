@@ -1,8 +1,72 @@
-import { ArrowLeft, X } from 'lucide-react';
-import type { Theme, Session } from '../../types';
+import { useMemo, useRef, useEffect } from 'react';
+import { ArrowLeft, X, Bot, User } from 'lucide-react';
+import type { Theme, Session, LogEntry } from '../../types';
 import type { InboxItem } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
 import { resolveContextUsageColor } from './InboxListView';
+import { formatRelativeTime } from '../../utils/formatters';
+
+const MAX_LOG_ENTRIES = 20;
+const MAX_LOG_TEXT_LENGTH = 500;
+
+function truncateLogText(text: string): string {
+	if (text.length <= MAX_LOG_TEXT_LENGTH) return text;
+	return text.slice(0, MAX_LOG_TEXT_LENGTH) + '\n… (truncated)';
+}
+
+function LogBubble({ log, theme }: { log: LogEntry; theme: Theme }) {
+	const isAI = log.source === 'ai';
+
+	return (
+		<div
+			className="flex gap-2"
+			style={{
+				flexDirection: isAI ? 'row' : 'row-reverse',
+			}}
+		>
+			{/* Source icon */}
+			<div
+				className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+				style={{
+					backgroundColor: isAI ? `${theme.colors.accent}20` : `${theme.colors.success}20`,
+				}}
+			>
+				{isAI ? (
+					<Bot className="w-3.5 h-3.5" style={{ color: theme.colors.accent }} />
+				) : (
+					<User className="w-3.5 h-3.5" style={{ color: theme.colors.success }} />
+				)}
+			</div>
+
+			{/* Message content */}
+			<div
+				className="flex-1 rounded-lg px-3 py-2 text-sm"
+				style={{
+					backgroundColor: isAI ? `${theme.colors.bgActivity}80` : `${theme.colors.accent}10`,
+					color: theme.colors.textMain,
+					maxWidth: '85%',
+				}}
+			>
+				{/* Text content — preserve whitespace for code */}
+				<div
+					style={{
+						whiteSpace: 'pre-wrap',
+						wordBreak: 'break-word',
+						fontSize: 13,
+						lineHeight: 1.5,
+					}}
+				>
+					{truncateLogText(log.text)}
+				</div>
+
+				{/* Timestamp */}
+				<div className="text-xs mt-1" style={{ color: theme.colors.textDim, opacity: 0.7 }}>
+					{formatRelativeTime(log.timestamp)}
+				</div>
+			</div>
+		</div>
+	);
+}
 
 interface FocusModeViewProps {
 	theme: Theme;
@@ -33,6 +97,7 @@ export default function FocusModeView({
 	theme,
 	item,
 	items,
+	sessions,
 	currentIndex,
 	onClose,
 	onExitFocus,
@@ -48,6 +113,30 @@ export default function FocusModeView({
 	// Truncate helper
 	const truncate = (str: string, max: number) =>
 		str.length > max ? str.slice(0, max) + '...' : str;
+
+	// Session existence check (session may be deleted while focus mode is open)
+	const sessionExists = sessions.some((s) => s.id === item.sessionId);
+
+	// Compute conversation tail — last N AI/user log entries
+	const logs = useMemo(() => {
+		const session = sessions.find((s) => s.id === item.sessionId);
+		if (!session) return [];
+		const tab = session.aiTabs.find((t) => t.id === item.tabId);
+		if (!tab) return [];
+		// Filter to only show AI and user messages
+		const relevant = tab.logs.filter((log) => log.source === 'ai' || log.source === 'user');
+		// Take last N entries
+		return relevant.slice(-MAX_LOG_ENTRIES);
+	}, [sessions, item.sessionId, item.tabId]);
+
+	// Auto-scroll to bottom when logs change or item changes
+	const scrollRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (scrollRef.current) {
+			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+		}
+	}, [logs, item.sessionId, item.tabId]);
 
 	return (
 		<div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
@@ -166,15 +255,35 @@ export default function FocusModeView({
 				</span>
 			</div>
 
-			{/* Body — placeholder */}
-			<div
-				role="log"
-				aria-label="Agent conversation"
-				className="flex-1 flex items-center justify-center"
-				style={{ color: theme.colors.textDim }}
-			>
-				<span className="text-sm">Conversation view — Phase 04</span>
-			</div>
+			{/* Body — conversation tail */}
+			{!sessionExists ? (
+				<div className="flex-1 flex items-center justify-center" style={{ color: theme.colors.textDim }}>
+					<span className="text-sm">Session no longer available</span>
+				</div>
+			) : (
+				<div
+					ref={scrollRef}
+					role="log"
+					aria-label="Agent conversation"
+					className="flex-1 overflow-y-auto px-4 py-3"
+					style={{ minHeight: 0 }}
+				>
+					{logs.length === 0 ? (
+						<div
+							className="flex items-center justify-center h-full"
+							style={{ color: theme.colors.textDim }}
+						>
+							<span className="text-sm">No conversation yet</span>
+						</div>
+					) : (
+						<div className="flex flex-col gap-3">
+							{logs.map((log) => (
+								<LogBubble key={log.id} log={log} theme={theme} />
+							))}
+						</div>
+					)}
+				</div>
+			)}
 
 			{/* Footer — 44px */}
 			<div
