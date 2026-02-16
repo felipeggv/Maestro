@@ -4,7 +4,6 @@ import { X, CheckCircle, ChevronDown, ChevronRight, Maximize2, Minimize2 } from 
 import type { Theme, SessionState } from '../../types';
 import type { InboxItem, InboxFilterMode, InboxSortMode } from '../../types/agent-inbox';
 import { STATUS_LABELS, STATUS_COLORS } from '../../types/agent-inbox';
-import { useListNavigation } from '../../hooks/keyboard/useListNavigation';
 import { formatRelativeTime } from '../../utils/formatters';
 import { formatShortcutKeys } from '../../utils/shortcutFormatter';
 import { getModalActions } from '../../stores/modalStore';
@@ -362,7 +361,7 @@ function SegmentedControl<T extends string>({
 interface RowExtraProps {
 	rows: ListRow[];
 	theme: Theme;
-	selectedIndex: number;
+	selectedRowIndex: number;
 	onNavigate: (item: InboxItem) => void;
 	collapsedGroups: Set<string>;
 	onToggleGroup: (groupName: string) => void;
@@ -374,7 +373,7 @@ function InboxRow({
 	style,
 	rows,
 	theme,
-	selectedIndex,
+	selectedRowIndex,
 	onNavigate,
 	collapsedGroups,
 	onToggleGroup,
@@ -386,6 +385,7 @@ function InboxRow({
 } & RowExtraProps) {
 	const row = rows[index];
 	if (!row) return null;
+	const isRowSelected = index === selectedRowIndex;
 
 	if (row.type === 'header') {
 		const isCollapsed = collapsedGroups.has(row.groupName);
@@ -414,11 +414,12 @@ function InboxRow({
 					paddingRight: 16,
 					fontSize: 13,
 					fontWeight: 600,
-					color: theme.colors.textDim,
+					color: isRowSelected ? theme.colors.accent : theme.colors.textDim,
 					letterSpacing: '0.5px',
 					textTransform: 'uppercase',
 					borderBottom: `2px solid ${theme.colors.border}40`,
-					borderLeft: `3px solid ${theme.colors.accent}40`,
+					borderLeft: `3px solid ${isRowSelected ? theme.colors.accent : theme.colors.accent + '40'}`,
+					backgroundColor: isRowSelected ? `${theme.colors.accent}10` : 'transparent',
 					cursor: 'pointer',
 				}}
 				onClick={() => onToggleGroup(row.groupName)}
@@ -485,7 +486,7 @@ function InboxRow({
 					<InboxItemCardContent
 						item={row.item}
 						theme={theme}
-						isSelected={row.index === selectedIndex}
+						isSelected={isRowSelected}
 						onClick={() => onNavigate(row.item)}
 					/>
 				</div>
@@ -544,41 +545,11 @@ export default function InboxListView({
 					next.delete(groupName);
 				} else {
 					next.add(groupName);
-					// Imperatively advance selection if current item is in the collapsed group
-					const selectedItem = items[selectedIndex];
-					if (selectedItem) {
-						const key =
-							sortMode === 'byAgent'
-								? selectedItem.sessionName
-								: (selectedItem.groupName ?? 'Ungrouped');
-						if (key === groupName) {
-							// Find next visible item (not in any collapsed group including the new one)
-							for (let i = selectedIndex + 1; i < items.length; i++) {
-								const item = items[i];
-								const k =
-									sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
-								if (!next.has(k)) {
-									setSelectedIndex(i);
-									return next;
-								}
-							}
-							// Wrap: find first visible item from start
-							for (let i = 0; i < selectedIndex; i++) {
-								const item = items[i];
-								const k =
-									sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
-								if (!next.has(k)) {
-									setSelectedIndex(i);
-									return next;
-								}
-							}
-						}
-					}
 				}
 				return next;
 			});
 		},
-		[items, selectedIndex, sortMode, setSelectedIndex]
+		[]
 	);
 
 	// Auto-collapse zero-unread agents ONLY on initial transition into byAgent mode.
@@ -589,7 +560,6 @@ export default function InboxListView({
 		prevSortModeRef.current = sortMode;
 
 		if (sortMode === 'byAgent' && prev !== 'byAgent') {
-			// Entering byAgent: auto-collapse agents with zero unreads
 			const agentUnreads = new Map<string, number>();
 			for (const item of items) {
 				const count = agentUnreads.get(item.sessionName) ?? 0;
@@ -601,10 +571,8 @@ export default function InboxListView({
 			}
 			setCollapsedGroups(toCollapse);
 		} else if (sortMode !== 'byAgent' && prev === 'byAgent') {
-			// Leaving byAgent: clear collapsed state
 			setCollapsedGroups(new Set());
 		}
-		// When already in byAgent and items change: do nothing — preserve manual toggles
 	}, [sortMode, items]);
 
 	const allRows = useMemo(() => buildRows(items, sortMode), [items, sortMode]);
@@ -612,16 +580,77 @@ export default function InboxListView({
 		if (collapsedGroups.size === 0) return allRows;
 		return allRows.filter((row) => {
 			if (row.type === 'header') return true;
-			// For byAgent mode, collapse by sessionName; for grouped mode, by groupName
 			const collapseKey =
 				sortMode === 'byAgent' ? row.item.sessionName : (row.item.groupName ?? 'Ungrouped');
 			return !collapsedGroups.has(collapseKey);
 		});
 	}, [allRows, collapsedGroups, sortMode]);
 
+	// ============================================================================
+	// Row-based navigation — navigates over rows (headers + items), no useListNavigation
+	// ============================================================================
+	// Initialize to first item row (skip leading headers)
+	const firstItemRow = useMemo(() => {
+		for (let i = 0; i < rows.length; i++) {
+			if (rows[i].type === 'item') return i;
+		}
+		return 0;
+	}, [rows]);
+	const [selectedRowIndex, setSelectedRowIndex] = useState(firstItemRow);
+
 	// Ref to the virtualized list
 	const listRef = useRef<ListImperativeAPI | null>(null);
 	const headerRef = useRef<HTMLDivElement>(null);
+
+	// Reset to first item row when sort/filter changes rows structure
+	useEffect(() => {
+		if (rows.length === 0) {
+			setSelectedRowIndex(0);
+			return;
+		}
+		// Clamp if out of bounds
+		if (selectedRowIndex >= rows.length) {
+			for (let i = rows.length - 1; i >= 0; i--) {
+				if (rows[i].type === 'item') {
+					setSelectedRowIndex(i);
+					return;
+				}
+			}
+			setSelectedRowIndex(0);
+		}
+	}, [rows.length, selectedRowIndex]);
+
+	// When sort mode or filter mode changes, reset selection to first item row
+	const prevSortForResetRef = useRef(sortMode);
+	const prevFilterForResetRef = useRef(filterMode);
+	useEffect(() => {
+		if (sortMode !== prevSortForResetRef.current || filterMode !== prevFilterForResetRef.current) {
+			prevSortForResetRef.current = sortMode;
+			prevFilterForResetRef.current = filterMode;
+			for (let i = 0; i < rows.length; i++) {
+				if (rows[i].type === 'item') {
+					setSelectedRowIndex(i);
+					return;
+				}
+			}
+			setSelectedRowIndex(0);
+		}
+	}, [sortMode, filterMode, rows]);
+
+	// Sync selectedRowIndex → parent's selectedIndex (item-index for Focus Mode)
+	useEffect(() => {
+		const row = rows[selectedRowIndex];
+		if (row && row.type === 'item') {
+			setSelectedIndex(row.index);
+		}
+	}, [selectedRowIndex, rows, setSelectedIndex]);
+
+	// Scroll to selected row
+	useEffect(() => {
+		if (listRef.current && rows.length > 0 && selectedRowIndex < rows.length) {
+			listRef.current.scrollToRow({ index: selectedRowIndex, align: 'smart' });
+		}
+	}, [selectedRowIndex, rows]);
 
 	const handleNavigate = useCallback(
 		(item: InboxItem) => {
@@ -633,92 +662,12 @@ export default function InboxListView({
 		[onNavigateToSession, onClose]
 	);
 
-	// useListNavigation handles ArrowUp/Down, Enter, and Cmd/Ctrl+1-9 hotkeys
-	const {
-		selectedIndex: hookSelectedIndex,
-		setSelectedIndex: hookSetSelectedIndex,
-		handleKeyDown: listHandleKeyDown,
-	} = useListNavigation({
-		listLength: items.length,
-		onSelect: (index: number) => {
-			if (items[index]) handleNavigate(items[index]);
-		},
-		enableNumberHotkeys: true,
-		firstVisibleIndex: 0,
-		enabled: true,
-		wrap: true,
-	});
-
-	// Sync useListNavigation's internal selectedIndex → lifted state
-	// Skip over items in collapsed groups (find nearest visible item)
-	useEffect(() => {
-		if (collapsedGroups.size === 0 || (sortMode !== 'grouped' && sortMode !== 'byAgent')) {
-			setSelectedIndex(hookSelectedIndex);
-			return;
-		}
-		const item = items[hookSelectedIndex];
-		if (!item) {
-			setSelectedIndex(hookSelectedIndex);
-			return;
-		}
-		const groupKey = sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
-		if (!collapsedGroups.has(groupKey)) {
-			setSelectedIndex(hookSelectedIndex);
-			return;
-		}
-		// Item is in a collapsed group — find next visible in forward direction
-		for (let i = hookSelectedIndex + 1; i < items.length; i++) {
-			const k = sortMode === 'byAgent' ? items[i].sessionName : (items[i].groupName ?? 'Ungrouped');
-			if (!collapsedGroups.has(k)) {
-				setSelectedIndex(i);
-				return;
-			}
-		}
-		// Wrap backwards
-		for (let i = hookSelectedIndex - 1; i >= 0; i--) {
-			const k = sortMode === 'byAgent' ? items[i].sessionName : (items[i].groupName ?? 'Ungrouped');
-			if (!collapsedGroups.has(k)) {
-				setSelectedIndex(i);
-				return;
-			}
-		}
-		setSelectedIndex(hookSelectedIndex);
-	}, [hookSelectedIndex, setSelectedIndex, collapsedGroups, items, sortMode]);
-
-	// Sync lifted state → useListNavigation when parent changes it
-	useEffect(() => {
-		hookSetSelectedIndex(selectedIndex);
-	}, [selectedIndex, hookSetSelectedIndex]);
-
-	// Scroll to selected item
-	useEffect(() => {
-		if (listRef.current && rows.length > 0) {
-			const rowIndex = findRowIndexForItem(selectedIndex);
-			if (rowIndex >= 0) {
-				listRef.current.scrollToRow({ index: rowIndex, align: 'smart' });
-			}
-		}
-	}, [selectedIndex, rows]);
-
-	// Map item index → row index (accounts for group headers)
-	const findRowIndexForItem = useCallback(
-		(itemIdx: number): number => {
-			for (let i = 0; i < rows.length; i++) {
-				const row = rows[i];
-				if (row.type === 'item' && row.index === itemIdx) return i;
-			}
-			return 0;
-		},
-		[rows]
-	);
-
 	// Get the selected item's element ID for aria-activedescendant
 	const selectedItemId = useMemo(() => {
-		if (items.length === 0) return undefined;
-		const item = items[selectedIndex];
-		if (!item) return undefined;
-		return `inbox-item-${item.sessionId}-${item.tabId}`;
-	}, [items, selectedIndex]);
+		const row = rows[selectedRowIndex];
+		if (!row || row.type !== 'item') return undefined;
+		return `inbox-item-${row.item.sessionId}-${row.item.tabId}`;
+	}, [rows, selectedRowIndex]);
 
 	// Collect focusable header elements for Tab cycling
 	const getHeaderFocusables = useCallback((): HTMLElement[] => {
@@ -726,10 +675,10 @@ export default function InboxListView({
 		return Array.from(headerRef.current.querySelectorAll<HTMLElement>('button, [tabindex="0"]'));
 	}, []);
 
-	// Combined keyboard handler: useListNavigation for arrows/Enter/numbers + Tab cycling + F for focus
+	// Row-based keyboard handler — arrows navigate rows (headers + items)
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			// Tab cycling is not handled by useListNavigation — handle it here
+			// Tab cycling for header controls
 			if (e.key === 'Tab') {
 				const focusables = getHeaderFocusables();
 				if (focusables.length === 0) return;
@@ -737,7 +686,6 @@ export default function InboxListView({
 				const focusIdx = focusables.indexOf(active as HTMLElement);
 
 				if (e.shiftKey) {
-					// Shift+Tab: go backwards
 					if (focusIdx <= 0) {
 						e.preventDefault();
 						containerRef.current?.focus();
@@ -746,7 +694,6 @@ export default function InboxListView({
 						focusables[focusIdx - 1].focus();
 					}
 				} else {
-					// Tab: go forwards
 					if (focusIdx === -1) {
 						e.preventDefault();
 						focusables[0].focus();
@@ -761,33 +708,73 @@ export default function InboxListView({
 				return;
 			}
 
-			// T to toggle group collapse (only in grouped/byAgent sort modes)
+			// Arrow navigation over rows (headers + items)
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				if (rows.length === 0) return;
+				setSelectedRowIndex((prev) => (prev + 1) % rows.length);
+				return;
+			}
+			if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				if (rows.length === 0) return;
+				setSelectedRowIndex((prev) => (prev - 1 + rows.length) % rows.length);
+				return;
+			}
+
+			// T / Enter on a header → toggle group
+			// Enter on an item → navigate to session
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				const row = rows[selectedRowIndex];
+				if (!row) return;
+				if (row.type === 'header') {
+					toggleGroup(row.groupName);
+				} else {
+					handleNavigate(row.item);
+				}
+				return;
+			}
+
+			// T to toggle group (works on headers AND items)
 			if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey) {
 				if (sortMode === 'grouped' || sortMode === 'byAgent') {
 					e.preventDefault();
-					const selectedItem = items[selectedIndex];
-					if (selectedItem) {
+					const row = rows[selectedRowIndex];
+					if (!row) return;
+					if (row.type === 'header') {
+						toggleGroup(row.groupName);
+					} else {
 						const groupKey =
 							sortMode === 'byAgent'
-								? selectedItem.sessionName
-								: (selectedItem.groupName ?? 'Ungrouped');
+								? row.item.sessionName
+								: (row.item.groupName ?? 'Ungrouped');
 						toggleGroup(groupKey);
 					}
 				}
 				return;
 			}
 
-			// Delegate to useListNavigation for arrows, Enter, Cmd/Ctrl+1-9
-			listHandleKeyDown(e);
+			// Cmd/Ctrl+1-9, 0 hotkeys for quick select (item-index based)
+			if ((e.metaKey || e.ctrlKey) && ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].includes(e.key)) {
+				e.preventDefault();
+				const number = e.key === '0' ? 10 : parseInt(e.key);
+				const targetItemIndex = number - 1;
+				if (targetItemIndex >= 0 && targetItemIndex < items.length) {
+					handleNavigate(items[targetItemIndex]);
+				}
+				return;
+			}
 		},
 		[
 			getHeaderFocusables,
-			listHandleKeyDown,
 			containerRef,
+			rows,
+			selectedRowIndex,
 			sortMode,
 			items,
-			selectedIndex,
 			toggleGroup,
+			handleNavigate,
 		]
 	);
 
@@ -814,13 +801,13 @@ export default function InboxListView({
 		() => ({
 			rows,
 			theme,
-			selectedIndex,
+			selectedRowIndex,
 			onNavigate: handleNavigate,
 			collapsedGroups,
 			onToggleGroup: toggleGroup,
 			sortMode,
 		}),
-		[rows, theme, selectedIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode]
+		[rows, theme, selectedRowIndex, handleNavigate, collapsedGroups, toggleGroup, sortMode]
 	);
 
 	// Calculate list height

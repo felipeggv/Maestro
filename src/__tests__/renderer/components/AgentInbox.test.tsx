@@ -1379,7 +1379,7 @@ describe('AgentInbox', () => {
 	// findRowIndexForItem — grouped mode navigation
 	// ==========================================================================
 	describe('findRowIndexForItem', () => {
-		it('navigates correctly in grouped mode, skipping group headers', () => {
+		it('navigates correctly in grouped mode, group headers are selectable', () => {
 			const groups = [createGroup({ id: 'g1', name: 'Alpha' })];
 			const sessions = [
 				createInboxSession('s1', 't1', { groupId: 'g1' }),
@@ -1401,13 +1401,13 @@ describe('AgentInbox', () => {
 			// First item is selected by default → aria-activedescendant should point to it
 			expect(listbox.getAttribute('aria-activedescendant')).toBe('inbox-item-s1-t1');
 
-			// Navigate down to second item
+			// Navigate down — lands on "Ungrouped" header (no activedescendant for headers)
 			const dialog = screen.getByRole('dialog');
 			fireEvent.keyDown(dialog, { key: 'ArrowDown' });
+			expect(listbox.getAttribute('aria-activedescendant')).toBeNull();
 
-			// aria-activedescendant should now point to the second item
-			// This proves findRowIndexForItem correctly mapped item index 1
-			// to a row index that accounts for group headers
+			// Navigate down again — lands on second item
+			fireEvent.keyDown(dialog, { key: 'ArrowDown' });
 			expect(listbox.getAttribute('aria-activedescendant')).toBe('inbox-item-s2-t2');
 		});
 
