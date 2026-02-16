@@ -420,7 +420,7 @@ function InboxRow({
 					letterSpacing: '0.5px',
 					textTransform: 'uppercase',
 					borderBottom: `2px solid ${theme.colors.border}40`,
-					borderLeft: `3px solid ${isRowSelected ? theme.colors.accent : theme.colors.accent + '40'}`,
+					borderLeft: isRowSelected ? `3px solid ${theme.colors.accent}` : '3px solid transparent',
 					backgroundColor: isRowSelected ? `${theme.colors.accent}10` : 'transparent',
 					cursor: 'pointer',
 				}}
@@ -477,7 +477,11 @@ function InboxRow({
 				{showNumber ? (
 					<div
 						className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
-						style={{ backgroundColor: theme.colors.bgMain, color: theme.colors.textDim }}
+						style={{
+						backgroundColor: theme.colors.bgMain,
+						color: theme.colors.textDim,
+						border: `1px solid ${theme.colors.border}`,
+					}}
 						data-testid="number-badge"
 					>
 						{numberBadge}
@@ -806,13 +810,13 @@ export default function InboxListView({
 			if (e.key === 'ArrowDown') {
 				e.preventDefault();
 				if (rows.length === 0) return;
-				setSelectedRowIndex((prev) => (prev + 1) % rows.length);
+				setSelectedRowIndex((prev) => Math.min(prev + 1, rows.length - 1));
 				return;
 			}
 			if (e.key === 'ArrowUp') {
 				e.preventDefault();
 				if (rows.length === 0) return;
-				setSelectedRowIndex((prev) => (prev - 1 + rows.length) % rows.length);
+				setSelectedRowIndex((prev) => Math.max(prev - 1, 0));
 				return;
 			}
 
@@ -922,6 +926,15 @@ export default function InboxListView({
 
 	const actionCount = items.length;
 
+	// Filter-aware count label
+	const countLabel = filterMode === 'unread'
+		? `${actionCount} unread`
+		: filterMode === 'starred'
+			? `${actionCount} starred`
+			: filterMode === 'read'
+				? `${actionCount} read`
+				: `${actionCount} need action`;
+
 	return (
 		<>
 			{/* Header — 80px, two rows */}
@@ -952,7 +965,7 @@ export default function InboxListView({
 								color: theme.colors.accent,
 							}}
 						>
-							{actionCount} need action
+							{countLabel}
 						</span>
 					</div>
 					<div className="flex items-center gap-2">
@@ -1092,7 +1105,7 @@ export default function InboxListView({
 					color: theme.colors.textDim,
 				}}
 			>
-				<span>{actionCount} items</span>
+				<span>{countLabel}</span>
 				<span>{`↑↓ navigate • ${sortMode === 'grouped' || sortMode === 'byAgent' ? 'T collapse • ' : ''}F focus • Enter open • ${formatShortcutKeys(['Meta'])}1-9 quick select • Esc close`}</span>
 			</div>
 		</>

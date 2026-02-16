@@ -312,15 +312,18 @@ describe('AgentInbox', () => {
 			expect(screen.getByText('Unified Inbox')).toBeTruthy();
 		});
 
-		it('shows item count badge with "need action" text', () => {
+		it('shows item count badge with filter-aware text', () => {
 			const sessions = [createInboxSession('s1', 't1')];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
-			expect(screen.getByText('1 need action')).toBeTruthy();
+			// Default filter is 'unread', so label says "unread" (header badge + footer)
+			const matches = screen.getAllByText('1 unread');
+			expect(matches.length).toBeGreaterThanOrEqual(1);
 		});
 
-		it('shows "0 need action" when no items', () => {
+		it('shows "0 unread" when no items', () => {
 			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
-			expect(screen.getByText('0 need action')).toBeTruthy();
+			const matches = screen.getAllByText('0 unread');
+			expect(matches.length).toBeGreaterThanOrEqual(1);
 		});
 
 		it('shows empty state message when no items match filter', () => {
@@ -331,7 +334,7 @@ describe('AgentInbox', () => {
 
 		it('renders footer with item count and keyboard hints', () => {
 			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
-			expect(screen.getByText('0 items')).toBeTruthy();
+			expect(screen.getAllByText('0 unread').length).toBeGreaterThanOrEqual(1);
 			expect(screen.getByText(/↑↓ navigate/)).toBeTruthy();
 			expect(screen.getByText(/Enter open/)).toBeTruthy();
 			expect(screen.getByText(/quick select/)).toBeTruthy();
@@ -556,26 +559,28 @@ describe('AgentInbox', () => {
 			expect(options[0].getAttribute('aria-selected')).toBe('true');
 		});
 
-		it('ArrowDown wraps from last to first item', () => {
+		it('ArrowDown clamps at last item instead of wrapping', () => {
 			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
-			// Go down twice (past last item, should wrap to first)
+			// Go down twice (past last item, should clamp at last)
 			fireEvent.keyDown(dialog, { key: 'ArrowDown' });
 			fireEvent.keyDown(dialog, { key: 'ArrowDown' });
 
 			const options = screen.getAllByRole('option');
-			expect(options[0].getAttribute('aria-selected')).toBe('true');
+			// Should stay on last item, not wrap to first
+			expect(options[1].getAttribute('aria-selected')).toBe('true');
 		});
 
-		it('ArrowUp wraps from first to last item', () => {
+		it('ArrowUp clamps at first item instead of wrapping', () => {
 			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
 			fireEvent.keyDown(dialog, { key: 'ArrowUp' });
 
 			const options = screen.getAllByRole('option');
-			expect(options[1].getAttribute('aria-selected')).toBe('true');
+			// Should stay on first item, not wrap to last
+			expect(options[0].getAttribute('aria-selected')).toBe('true');
 		});
 
 		it('Enter navigates to selected session and closes modal', () => {
@@ -791,8 +796,9 @@ describe('AgentInbox', () => {
 
 		it('badge has aria-live=polite', () => {
 			render(<AgentInbox theme={theme} sessions={[]} groups={[]} onClose={onClose} />);
-			const liveRegion = screen.getByText('0 need action');
-			expect(liveRegion.getAttribute('aria-live')).toBe('polite');
+			const matches = screen.getAllByText('0 unread');
+			const liveRegion = matches.find((el) => el.getAttribute('aria-live') === 'polite');
+			expect(liveRegion).toBeTruthy();
 		});
 
 		it('filter control has aria-label="Filter sessions"', () => {
@@ -965,7 +971,7 @@ describe('AgentInbox', () => {
 				createInboxSession('s3', 't3'),
 			];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
-			expect(screen.getByText('3 need action')).toBeTruthy();
+			expect(screen.getAllByText('3 unread').length).toBeGreaterThanOrEqual(1);
 		});
 
 		it('first item is selected by default', () => {
@@ -1890,7 +1896,7 @@ describe('AgentInbox', () => {
 		it('footer uses justify-between layout with count left and hints right', () => {
 			const sessions = [createInboxSession('s1', 't1')];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
-			expect(screen.getByText('1 items')).toBeTruthy();
+			expect(screen.getAllByText('1 unread').length).toBeGreaterThanOrEqual(1);
 			// Hints are in a single span with bullet separators
 			const hintsSpan = screen.getByText(/quick select/);
 			expect(hintsSpan.textContent).toContain('•');
@@ -2225,7 +2231,7 @@ describe('AgentInbox', () => {
 			expect(screen.getByText('Unified Inbox')).toBeTruthy();
 		});
 
-		it('Cmd+ArrowLeft navigates to previous item in focus mode', () => {
+		it('Cmd+ArrowLeft clamps at first item in focus mode', () => {
 			const sessions = [createInboxSession('s1', 't1'), createInboxSession('s2', 't2')];
 			render(<AgentInbox theme={theme} sessions={sessions} groups={[]} onClose={onClose} />);
 			const dialog = screen.getByRole('dialog');
@@ -2233,10 +2239,10 @@ describe('AgentInbox', () => {
 			fireEvent.keyDown(dialog, { key: 'f' });
 			// Should show "1 / 2" initially
 			expect(screen.getByText('1 / 2')).toBeTruthy();
-			// Navigate with Cmd+ArrowLeft (wraps around)
+			// Navigate with Cmd+ArrowLeft (clamps at first, no wrap)
 			fireEvent.keyDown(dialog, { key: 'ArrowLeft', metaKey: true });
-			// Should now be "2 / 2"
-			expect(screen.getByText('2 / 2')).toBeTruthy();
+			// Should stay at "1 / 2" since already at first item
+			expect(screen.getByText('1 / 2')).toBeTruthy();
 		});
 
 		it('Cmd+ArrowRight navigates to next item in focus mode', () => {

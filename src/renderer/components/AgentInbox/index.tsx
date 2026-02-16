@@ -149,7 +149,7 @@ export default function AgentInbox({
 						if (e.metaKey || e.ctrlKey) {
 							e.preventDefault();
 							if (items.length > 1) {
-								setFocusIndex((prev) => (prev - 1 + items.length) % items.length);
+								setFocusIndex((prev) => Math.max(prev - 1, 0));
 							}
 						}
 						return;
@@ -157,7 +157,7 @@ export default function AgentInbox({
 						if (e.metaKey || e.ctrlKey) {
 							e.preventDefault();
 							if (items.length > 1) {
-								setFocusIndex((prev) => (prev + 1) % items.length);
+								setFocusIndex((prev) => Math.min(prev + 1, items.length - 1));
 							}
 						}
 						return;
