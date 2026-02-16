@@ -51,6 +51,7 @@ export default function AgentInbox({
 	// ---- View mode state ----
 	const [viewMode, setViewMode] = useState<InboxViewMode>('list');
 	const [focusIndex, setFocusIndex] = useState(0);
+	const [selectedIndex, setSelectedIndex] = useState(0);
 
 	// ---- Filter/sort state (lifted from InboxListView for shared access) ----
 	const inboxData = useModalStore(selectModalData('agentInbox'));
@@ -95,19 +96,58 @@ export default function AgentInbox({
 	// ---- Keyboard handler ref from InboxListView ----
 	const listKeyDownRef = useRef<((e: React.KeyboardEvent) => void) | null>(null);
 
-	// ---- Shell-level keydown: focus mode Escape + delegate to InboxListView ----
-	const handleShellKeyDown = useCallback((e: React.KeyboardEvent) => {
-		if (viewMode === 'focus' && e.key === 'Escape') {
-			e.preventDefault();
-			e.stopPropagation();
-			handleExitFocus();
-			return;
-		}
-		// Delegate to InboxListView's keyboard handler in list mode
-		if (viewMode === 'list' && listKeyDownRef.current) {
-			listKeyDownRef.current(e);
-		}
-	}, [viewMode, handleExitFocus]);
+	// ---- Shell-level keydown: focus mode keys + list mode delegation ----
+	const handleShellKeyDown = useCallback(
+		(e: React.KeyboardEvent) => {
+			if (viewMode === 'focus') {
+				switch (e.key) {
+					case 'Escape':
+						e.preventDefault();
+						e.stopPropagation();
+						handleExitFocus();
+						return;
+					case 'ArrowLeft':
+						e.preventDefault();
+						if (items.length > 1) {
+							setFocusIndex((prev) => (prev - 1 + items.length) % items.length);
+						}
+						return;
+					case 'ArrowRight':
+						e.preventDefault();
+						if (items.length > 1) {
+							setFocusIndex((prev) => (prev + 1) % items.length);
+						}
+						return;
+					case 'Backspace':
+					case 'b':
+					case 'B':
+						// Guard: only exit if NOT typing in the reply textarea
+						if (document.activeElement?.tagName !== 'TEXTAREA') {
+							e.preventDefault();
+							handleExitFocus();
+						}
+						return;
+				}
+				// Let unrecognized keys propagate (don't consume them)
+				return;
+			}
+
+			// List mode: F to enter focus
+			if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+				e.preventDefault();
+				if (items.length > 0 && items[selectedIndex]) {
+					handleEnterFocus(items[selectedIndex]);
+				}
+				return;
+			}
+
+			// Delegate to InboxListView's keyboard handler in list mode
+			if (viewMode === 'list' && listKeyDownRef.current) {
+				listKeyDownRef.current(e);
+			}
+		},
+		[viewMode, items, selectedIndex, handleEnterFocus, handleExitFocus]
+	);
 
 	return (
 		<div
@@ -134,6 +174,8 @@ export default function AgentInbox({
 					<InboxListView
 						theme={theme}
 						items={items}
+						selectedIndex={selectedIndex}
+						setSelectedIndex={setSelectedIndex}
 						filterMode={filterMode}
 						setFilterMode={setFilterMode}
 						sortMode={sortMode}

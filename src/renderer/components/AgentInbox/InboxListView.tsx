@@ -12,6 +12,8 @@ import { getModalActions } from '../../stores/modalStore';
 interface InboxListViewProps {
 	theme: Theme;
 	items: InboxItem[];
+	selectedIndex: number;
+	setSelectedIndex: React.Dispatch<React.SetStateAction<number>>;
 	filterMode: InboxFilterMode;
 	setFilterMode: (mode: InboxFilterMode) => void;
 	sortMode: InboxSortMode;
@@ -495,6 +497,8 @@ const FILTER_OPTIONS: { value: InboxFilterMode; label: string }[] = [
 export default function InboxListView({
 	theme,
 	items,
+	selectedIndex,
+	setSelectedIndex,
 	filterMode,
 	setFilterMode,
 	sortMode,
@@ -578,7 +582,7 @@ export default function InboxListView({
 	);
 
 	// useListNavigation handles ArrowUp/Down, Enter, and Cmd/Ctrl+1-9 hotkeys
-	const { selectedIndex, handleKeyDown: listHandleKeyDown } = useListNavigation({
+	const { selectedIndex: hookSelectedIndex, setSelectedIndex: hookSetSelectedIndex, handleKeyDown: listHandleKeyDown } = useListNavigation({
 		listLength: items.length,
 		onSelect: (index: number) => {
 			if (items[index]) handleNavigate(items[index]);
@@ -588,6 +592,16 @@ export default function InboxListView({
 		enabled: true,
 		wrap: true,
 	});
+
+	// Sync useListNavigation's internal selectedIndex → lifted state
+	useEffect(() => {
+		setSelectedIndex(hookSelectedIndex);
+	}, [hookSelectedIndex, setSelectedIndex]);
+
+	// Sync lifted state → useListNavigation when parent changes it
+	useEffect(() => {
+		hookSetSelectedIndex(selectedIndex);
+	}, [selectedIndex, hookSetSelectedIndex]);
 
 	// Scroll to selected item
 	useEffect(() => {
@@ -660,19 +674,10 @@ export default function InboxListView({
 				return;
 			}
 
-			// F key: enter focus mode (before arrow key handling)
-			if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey) {
-				if (items.length > 0 && items[selectedIndex]) {
-					e.preventDefault();
-					onEnterFocus(items[selectedIndex]);
-				}
-				return;
-			}
-
 			// Delegate to useListNavigation for arrows, Enter, Cmd/Ctrl+1-9
 			listHandleKeyDown(e);
 		},
-		[getHeaderFocusables, listHandleKeyDown, items, selectedIndex, onEnterFocus, containerRef]
+		[getHeaderFocusables, listHandleKeyDown, containerRef]
 	);
 
 	// Expose keyboard handler to shell via ref
@@ -748,7 +753,35 @@ export default function InboxListView({
 							{actionCount} need action
 						</span>
 					</div>
-					<div className="flex items-center gap-1">
+					<div className="flex items-center gap-2">
+						<button
+							onClick={() => {
+								if (items.length > 0 && items[selectedIndex]) {
+									onEnterFocus(items[selectedIndex]);
+								}
+							}}
+							disabled={items.length === 0}
+							className="text-xs px-2.5 py-1 rounded transition-colors"
+							style={{
+								backgroundColor: items.length > 0 ? `${theme.colors.accent}15` : 'transparent',
+								color: items.length > 0 ? theme.colors.accent : theme.colors.textDim,
+								cursor: items.length > 0 ? 'pointer' : 'default',
+								opacity: items.length === 0 ? 0.5 : 1,
+							}}
+							onMouseEnter={(e) => {
+								if (items.length > 0) {
+									e.currentTarget.style.backgroundColor = `${theme.colors.accent}25`;
+								}
+							}}
+							onMouseLeave={(e) => {
+								if (items.length > 0) {
+									e.currentTarget.style.backgroundColor = `${theme.colors.accent}15`;
+								}
+							}}
+							title="Enter Focus Mode (F)"
+						>
+							Focus ▶
+						</button>
 						<button
 							onClick={() => onToggleExpanded((prev) => !prev)}
 							className="p-1.5 rounded"

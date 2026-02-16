@@ -211,14 +211,22 @@ export default function FocusModeView({
 					← Prev
 				</button>
 
-				{/* Counter */}
-				<span
-					aria-live="polite"
-					className="text-xs"
-					style={{ color: theme.colors.textDim }}
-				>
-					{currentIndex + 1} / {items.length}
-				</span>
+				{/* Center: counter + keyboard hints */}
+				<div className="flex flex-col items-center gap-0.5">
+					<span
+						aria-live="polite"
+						className="text-xs"
+						style={{ color: theme.colors.textDim }}
+					>
+						{currentIndex + 1} / {items.length}
+					</span>
+					<span
+						className="text-xs"
+						style={{ color: theme.colors.textDim, opacity: 0.7 }}
+					>
+						←→ Navigate · Esc Back
+					</span>
+				</div>
 
 				{/* Next button */}
 				<button

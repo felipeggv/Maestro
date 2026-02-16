@@ -743,16 +743,16 @@ describe('AgentInbox', () => {
 			const dialog = screen.getByRole('dialog');
 			dialog.focus();
 
-			// Count all header buttons (4 sort + 4 filter + 1 expand + 1 close = 10)
+			// Count all header buttons (4 sort + 4 filter + 1 focus + 1 expand + 1 close = 11)
 			fireEvent.keyDown(dialog, { key: 'Tab' });
 			const firstButton = document.activeElement;
 			expect(firstButton?.tagName).toBe('BUTTON');
 
 			// Tab through all header buttons
-			for (let i = 0; i < 9; i++) {
+			for (let i = 0; i < 10; i++) {
 				fireEvent.keyDown(dialog, { key: 'Tab' });
 			}
-			// After 10 total Tabs (1 + 9), should be at the last header button
+			// After 11 total Tabs (1 + 10), should be at the last header button
 			expect(document.activeElement?.tagName).toBe('BUTTON');
 
 			// One more Tab should wrap back to list container
