@@ -536,22 +536,60 @@ export default function InboxListView({
 		updateAgentInboxData({ filterMode, sortMode, isExpanded });
 	}, [filterMode, sortMode, isExpanded]);
 
-	const toggleGroup = useCallback((groupName: string) => {
-		setCollapsedGroups((prev) => {
-			const next = new Set(prev);
-			if (next.has(groupName)) {
-				next.delete(groupName);
-			} else {
-				next.add(groupName);
-			}
-			return next;
-		});
-	}, []);
+	const toggleGroup = useCallback(
+		(groupName: string) => {
+			setCollapsedGroups((prev) => {
+				const next = new Set(prev);
+				if (next.has(groupName)) {
+					next.delete(groupName);
+				} else {
+					next.add(groupName);
+					// Imperatively advance selection if current item is in the collapsed group
+					const selectedItem = items[selectedIndex];
+					if (selectedItem) {
+						const key =
+							sortMode === 'byAgent'
+								? selectedItem.sessionName
+								: (selectedItem.groupName ?? 'Ungrouped');
+						if (key === groupName) {
+							// Find next visible item (not in any collapsed group including the new one)
+							for (let i = selectedIndex + 1; i < items.length; i++) {
+								const item = items[i];
+								const k =
+									sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
+								if (!next.has(k)) {
+									setSelectedIndex(i);
+									return next;
+								}
+							}
+							// Wrap: find first visible item from start
+							for (let i = 0; i < selectedIndex; i++) {
+								const item = items[i];
+								const k =
+									sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
+								if (!next.has(k)) {
+									setSelectedIndex(i);
+									return next;
+								}
+							}
+						}
+					}
+				}
+				return next;
+			});
+		},
+		[items, selectedIndex, sortMode, setSelectedIndex]
+	);
 
-	// Auto-collapse zero-unread agents in byAgent mode
+	// Auto-collapse zero-unread agents ONLY on initial transition into byAgent mode.
+	// After that, manual toggles are preserved — items changes do NOT reset collapse state.
+	const prevSortModeRef = useRef(sortMode);
 	useEffect(() => {
-		if (sortMode === 'byAgent') {
-			// Compute which agents have zero unreads
+		const prev = prevSortModeRef.current;
+		prevSortModeRef.current = sortMode;
+
+		if (sortMode === 'byAgent' && prev !== 'byAgent') {
+			// Entering byAgent: auto-collapse agents with zero unreads
 			const agentUnreads = new Map<string, number>();
 			for (const item of items) {
 				const count = agentUnreads.get(item.sessionName) ?? 0;
@@ -562,10 +600,11 @@ export default function InboxListView({
 				if (count === 0) toCollapse.add(agent);
 			}
 			setCollapsedGroups(toCollapse);
-		} else {
-			// Clear auto-collapsed state when leaving byAgent
+		} else if (sortMode !== 'byAgent' && prev === 'byAgent') {
+			// Leaving byAgent: clear collapsed state
 			setCollapsedGroups(new Set());
 		}
+		// When already in byAgent and items change: do nothing — preserve manual toggles
 	}, [sortMode, items]);
 
 	const allRows = useMemo(() => buildRows(items, sortMode), [items, sortMode]);
@@ -579,40 +618,6 @@ export default function InboxListView({
 			return !collapsedGroups.has(collapseKey);
 		});
 	}, [allRows, collapsedGroups, sortMode]);
-
-	// Auto-advance selectedIndex if current item is in a collapsed group
-	useEffect(() => {
-		if (collapsedGroups.size === 0) return;
-		const selectedItem = items[selectedIndex];
-		if (!selectedItem) return;
-		const groupKey = sortMode === 'byAgent'
-			? selectedItem.sessionName
-			: (selectedItem.groupName ?? 'Ungrouped');
-		if (collapsedGroups.has(groupKey)) {
-			// Find next visible item after current index
-			for (let i = selectedIndex + 1; i < items.length; i++) {
-				const item = items[i];
-				const key = sortMode === 'byAgent'
-					? item.sessionName
-					: (item.groupName ?? 'Ungrouped');
-				if (!collapsedGroups.has(key)) {
-					setSelectedIndex(i);
-					return;
-				}
-			}
-			// Wrap: find first visible item from start
-			for (let i = 0; i < selectedIndex; i++) {
-				const item = items[i];
-				const key = sortMode === 'byAgent'
-					? item.sessionName
-					: (item.groupName ?? 'Ungrouped');
-				if (!collapsedGroups.has(key)) {
-					setSelectedIndex(i);
-					return;
-				}
-			}
-		}
-	}, [collapsedGroups, items, selectedIndex, sortMode, setSelectedIndex]);
 
 	// Ref to the virtualized list
 	const listRef = useRef<ListImperativeAPI | null>(null);
@@ -645,9 +650,40 @@ export default function InboxListView({
 	});
 
 	// Sync useListNavigation's internal selectedIndex → lifted state
+	// Skip over items in collapsed groups (find nearest visible item)
 	useEffect(() => {
+		if (collapsedGroups.size === 0 || (sortMode !== 'grouped' && sortMode !== 'byAgent')) {
+			setSelectedIndex(hookSelectedIndex);
+			return;
+		}
+		const item = items[hookSelectedIndex];
+		if (!item) {
+			setSelectedIndex(hookSelectedIndex);
+			return;
+		}
+		const groupKey = sortMode === 'byAgent' ? item.sessionName : (item.groupName ?? 'Ungrouped');
+		if (!collapsedGroups.has(groupKey)) {
+			setSelectedIndex(hookSelectedIndex);
+			return;
+		}
+		// Item is in a collapsed group — find next visible in forward direction
+		for (let i = hookSelectedIndex + 1; i < items.length; i++) {
+			const k = sortMode === 'byAgent' ? items[i].sessionName : (items[i].groupName ?? 'Ungrouped');
+			if (!collapsedGroups.has(k)) {
+				setSelectedIndex(i);
+				return;
+			}
+		}
+		// Wrap backwards
+		for (let i = hookSelectedIndex - 1; i >= 0; i--) {
+			const k = sortMode === 'byAgent' ? items[i].sessionName : (items[i].groupName ?? 'Ungrouped');
+			if (!collapsedGroups.has(k)) {
+				setSelectedIndex(i);
+				return;
+			}
+		}
 		setSelectedIndex(hookSelectedIndex);
-	}, [hookSelectedIndex, setSelectedIndex]);
+	}, [hookSelectedIndex, setSelectedIndex, collapsedGroups, items, sortMode]);
 
 	// Sync lifted state → useListNavigation when parent changes it
 	useEffect(() => {
@@ -731,9 +767,10 @@ export default function InboxListView({
 					e.preventDefault();
 					const selectedItem = items[selectedIndex];
 					if (selectedItem) {
-						const groupKey = sortMode === 'byAgent'
-							? selectedItem.sessionName
-							: (selectedItem.groupName ?? 'Ungrouped');
+						const groupKey =
+							sortMode === 'byAgent'
+								? selectedItem.sessionName
+								: (selectedItem.groupName ?? 'Ungrouped');
 						toggleGroup(groupKey);
 					}
 				}
@@ -743,7 +780,15 @@ export default function InboxListView({
 			// Delegate to useListNavigation for arrows, Enter, Cmd/Ctrl+1-9
 			listHandleKeyDown(e);
 		},
-		[getHeaderFocusables, listHandleKeyDown, containerRef, sortMode, items, selectedIndex, toggleGroup]
+		[
+			getHeaderFocusables,
+			listHandleKeyDown,
+			containerRef,
+			sortMode,
+			items,
+			selectedIndex,
+			toggleGroup,
+		]
 	);
 
 	// Expose keyboard handler to shell via ref
@@ -963,7 +1008,7 @@ export default function InboxListView({
 				}}
 			>
 				<span>{actionCount} items</span>
-				<span>{`↑↓ navigate • ${(sortMode === 'grouped' || sortMode === 'byAgent') ? 'T collapse • ' : ''}F focus • Enter open • ${formatShortcutKeys(['Meta'])}1-9 quick select • Esc close`}</span>
+				<span>{`↑↓ navigate • ${sortMode === 'grouped' || sortMode === 'byAgent' ? 'T collapse • ' : ''}F focus • Enter open • ${formatShortcutKeys(['Meta'])}1-9 quick select • Esc close`}</span>
 			</div>
 		</>
 	);
