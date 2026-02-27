@@ -861,7 +861,6 @@ export interface AppUtilityModalsProps {
 
 	// Director's Notes
 	onOpenDirectorNotes?: () => void;
-
 	// Agent Inbox (Unified Inbox)
 	onOpenAgentInbox?: () => void;
 
