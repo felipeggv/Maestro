@@ -118,6 +118,8 @@ interface QuickActionsModalProps {
 	onOpenSymphony?: () => void;
 	// Director's Notes
 	onOpenDirectorNotes?: () => void;
+	// Agent Inbox (Unified Inbox)
+	onOpenAgentInbox?: () => void;
 	// Auto-scroll
 	autoScrollAiMode?: boolean;
 	setAutoScrollAiMode?: (value: boolean) => void;
@@ -205,6 +207,7 @@ export const QuickActionsModal = memo(function QuickActionsModal(props: QuickAct
 		onOpenLastDocumentGraph,
 		onOpenSymphony,
 		onOpenDirectorNotes,
+		onOpenAgentInbox,
 		autoScrollAiMode,
 		setAutoScrollAiMode,
 	} = props;
@@ -1030,6 +1033,21 @@ export const QuickActionsModal = memo(function QuickActionsModal(props: QuickAct
 						subtext: 'View unified history and AI synopsis across all sessions',
 						action: () => {
 							onOpenDirectorNotes();
+							setQuickActionOpen(false);
+						},
+					},
+				]
+			: []),
+		// Agent Inbox (Unified Inbox) - cross-agent message hub
+		...(onOpenAgentInbox
+			? [
+					{
+						id: 'agentInbox',
+						label: 'Unified Inbox',
+						shortcut: shortcuts.agentInbox,
+						subtext: 'Open the unified inbox for cross-agent messages',
+						action: () => {
+							onOpenAgentInbox();
 							setQuickActionOpen(false);
 						},
 					},
