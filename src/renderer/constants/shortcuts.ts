@@ -83,6 +83,7 @@ export const DEFAULT_SHORTCUTS: Record<string, Shortcut> = {
 		label: 'Reset Font Size',
 		keys: ['Meta', 'Shift', '0'],
 	},
+	agentInbox: { id: 'agentInbox', label: 'Unified Inbox', keys: ['Alt', 'Meta', 'i'] },
 };
 
 // Non-editable shortcuts (displayed in help but not configurable)
