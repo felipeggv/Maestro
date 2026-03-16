@@ -41,6 +41,7 @@ const DocumentGraphView = lazy(() =>
 const DirectorNotesModal = lazy(() =>
 	import('./components/DirectorNotes').then((m) => ({ default: m.DirectorNotesModal }))
 );
+const AgentInbox = lazy(() => import('./components/AgentInbox'));
 const CueModal = lazy(() => import('./components/CueModal').then((m) => ({ default: m.CueModal })));
 const CueYamlEditor = lazy(() =>
 	import('./components/CueYamlEditor').then((m) => ({ default: m.CueYamlEditor }))
@@ -161,7 +162,14 @@ import { ToastContainer } from './components/Toast';
 
 // Import types and constants
 // Note: GroupChat, GroupChatState are imported from types (re-exported from shared)
-import type { RightPanelTab, Session, QueuedItem, CustomAICommand, ThinkingItem } from './types';
+import type {
+	RightPanelTab,
+	Session,
+	QueuedItem,
+	CustomAICommand,
+	ThinkingItem,
+	ThinkingMode,
+} from './types';
 import { THEMES } from './constants/themes';
 import { generateId } from './utils/ids';
 import { getContextColor } from './utils/theme';
@@ -333,6 +341,9 @@ function MaestroConsoleInner() {
 		// Director's Notes Modal
 		directorNotesOpen,
 		setDirectorNotesOpen,
+		// Agent Inbox Modal
+		agentInboxOpen,
+		setAgentInboxOpen,
 		// Maestro Cue Modal
 		cueModalOpen,
 		setCueModalOpen,
@@ -436,6 +447,10 @@ function MaestroConsoleInner() {
 	useEffect(() => {
 		if (!encoreFeatures.usageStats) setUsageDashboardOpen(false);
 	}, [encoreFeatures.usageStats, setUsageDashboardOpen]);
+
+	useEffect(() => {
+		if (!encoreFeatures.unifiedInbox) setAgentInboxOpen(false);
+	}, [encoreFeatures.unifiedInbox, setAgentInboxOpen]);
 
 	// --- KEYBOARD SHORTCUT HELPERS ---
 	const { isShortcut, isTabShortcut } = useKeyboardShortcutHelpers({
@@ -795,6 +810,7 @@ function MaestroConsoleInner() {
 		handleCloseCurrentTab,
 		handleRequestTabRename,
 		handleUpdateTabByClaudeSessionId,
+		handleUpdateTabDescription,
 		handleTabStar,
 		handleTabMarkUnread,
 		handleToggleTabReadOnlyMode,
@@ -1405,6 +1421,14 @@ function MaestroConsoleInner() {
 		activeSessionIdRef,
 	});
 
+	const inboxProcessInputRef = useRef<(text?: string) => void>(() => {});
+	inboxProcessInputRef.current = processInput;
+	const [pendingInboxQuickReply, setPendingInboxQuickReply] = useState<{
+		targetSessionId: string;
+		previousActiveSessionId: string | null;
+		text: string;
+	} | null>(null);
+
 	// This is used by context transfer to automatically send the transferred context to the agent
 	useEffect(() => {
 		if (!activeSession) return;
@@ -1445,6 +1469,139 @@ function MaestroConsoleInner() {
 
 		return () => clearTimeout(timeoutId);
 	}, [activeSession?.id, activeSession?.activeTabId]);
+
+	useEffect(() => {
+		if (!pendingInboxQuickReply) return;
+		if (activeSession?.id !== pendingInboxQuickReply.targetSessionId) return;
+
+		inboxProcessInputRef.current(pendingInboxQuickReply.text);
+		const previousActiveSessionId = pendingInboxQuickReply.previousActiveSessionId;
+		const targetSessionId = pendingInboxQuickReply.targetSessionId;
+		setPendingInboxQuickReply(null);
+
+		if (previousActiveSessionId && previousActiveSessionId !== targetSessionId) {
+			queueMicrotask(() => {
+				setActiveSessionId(previousActiveSessionId);
+			});
+		}
+	}, [pendingInboxQuickReply, activeSession?.id, setActiveSessionId]);
+
+	const handleAgentInboxNavigateToSession = useCallback(
+		(sessionId: string, tabId?: string) => {
+			setAgentInboxOpen(false);
+			setActiveSessionId(sessionId);
+			if (!tabId) return;
+
+			setSessions((prev) =>
+				prev.map((session) =>
+					session.id === sessionId
+						? {
+								...session,
+								activeTabId: tabId,
+								activeFileTabId: null,
+								inputMode: 'ai' as const,
+							}
+						: session
+				)
+			);
+		},
+		[setAgentInboxOpen, setActiveSessionId, setSessions]
+	);
+
+	const handleAgentInboxQuickReply = useCallback(
+		(sessionId: string, tabId: string, text: string) => {
+			const previousActiveSessionId = activeSessionIdRef.current;
+
+			setSessions((prev) =>
+				prev.map((session) => {
+					if (session.id !== sessionId) return session;
+					return {
+						...session,
+						activeTabId: tabId,
+						activeFileTabId: null,
+						inputMode: 'ai' as const,
+						aiTabs: session.aiTabs.map((tab) =>
+							tab.id === tabId ? { ...tab, hasUnread: false } : tab
+						),
+					};
+				})
+			);
+
+			setPendingInboxQuickReply({
+				targetSessionId: sessionId,
+				previousActiveSessionId,
+				text,
+			});
+			setActiveSessionId(sessionId);
+		},
+		[setSessions, setActiveSessionId, activeSessionIdRef]
+	);
+
+	const handleAgentInboxOpenAndReply = useCallback(
+		(sessionId: string, tabId: string, text: string) => {
+			setActiveSessionId(sessionId);
+			setSessions((prev) =>
+				prev.map((session) => {
+					if (session.id !== sessionId) return session;
+					return {
+						...session,
+						activeTabId: tabId,
+						activeFileTabId: null,
+						inputMode: 'ai' as const,
+						aiTabs: session.aiTabs.map((tab) =>
+							tab.id === tabId ? { ...tab, inputValue: text, hasUnread: false } : tab
+						),
+					};
+				})
+			);
+			setAgentInboxOpen(false);
+		},
+		[setActiveSessionId, setSessions, setAgentInboxOpen]
+	);
+
+	const handleAgentInboxMarkAsRead = useCallback(
+		(sessionId: string, tabId: string) => {
+			setSessions((prev) =>
+				prev.map((session) => {
+					if (session.id !== sessionId) return session;
+					return {
+						...session,
+						aiTabs: session.aiTabs.map((tab) =>
+							tab.id === tabId ? { ...tab, hasUnread: false } : tab
+						),
+					};
+				})
+			);
+		},
+		[setSessions]
+	);
+
+	const handleAgentInboxToggleThinking = useCallback(
+		(sessionId: string, tabId: string, mode: ThinkingMode) => {
+			setSessions((prev) =>
+				prev.map((session) => {
+					if (session.id !== sessionId) return session;
+					return {
+						...session,
+						aiTabs: session.aiTabs.map((tab) => {
+							if (tab.id !== tabId) return tab;
+							if (mode === 'off') {
+								return {
+									...tab,
+									showThinking: 'off',
+									logs: tab.logs.filter(
+										(log) => log.source !== 'thinking' && log.source !== 'tool'
+									),
+								};
+							}
+							return { ...tab, showThinking: mode };
+						}),
+					};
+				})
+			);
+		},
+		[setSessions]
+	);
 
 	// Initialize activity tracker for per-session time tracking
 	useActivityTracker(activeSessionId, setSessions);
@@ -2237,6 +2394,7 @@ function MaestroConsoleInner() {
 		setMarketplaceModalOpen,
 		setSymphonyModalOpen,
 		setDirectorNotesOpen,
+		setAgentInboxOpen,
 		setCueModalOpen,
 		encoreFeatures,
 		setShowNewGroupChatModal,
@@ -2450,6 +2608,9 @@ function MaestroConsoleInner() {
 		handleTabReorder,
 		handleUnifiedTabReorder,
 		handleUpdateTabByClaudeSessionId,
+		handleUpdateTabDescription: encoreFeatures.tabDescription
+			? handleUpdateTabDescription
+			: undefined,
 		handleTabStar,
 		handleTabMarkUnread,
 		handleToggleTabReadOnlyMode,
@@ -2926,6 +3087,7 @@ function MaestroConsoleInner() {
 					onOpenDirectorNotes={
 						encoreFeatures.directorNotes ? () => setDirectorNotesOpen(true) : undefined
 					}
+					onOpenAgentInbox={encoreFeatures.unifiedInbox ? () => setAgentInboxOpen(true) : undefined}
 					onOpenMaestroCue={encoreFeatures.maestroCue ? () => setCueModalOpen(true) : undefined}
 					onConfigureCue={encoreFeatures.maestroCue ? handleConfigureCue : undefined}
 					autoScrollAiMode={autoScrollAiMode}
@@ -3116,6 +3278,24 @@ function MaestroConsoleInner() {
 							onFileClick={(path: string) =>
 								handleFileClick({ name: path.split('/').pop() || path, type: 'file' }, path)
 							}
+						/>
+					</Suspense>
+				)}
+
+				{/* --- AGENT INBOX MODAL (lazy-loaded, Encore Feature) --- */}
+				{encoreFeatures.unifiedInbox && agentInboxOpen && (
+					<Suspense fallback={null}>
+						<AgentInbox
+							theme={theme}
+							sessions={sessions}
+							groups={groups}
+							enterToSendAI={enterToSendAI}
+							onClose={() => setAgentInboxOpen(false)}
+							onNavigateToSession={handleAgentInboxNavigateToSession}
+							onQuickReply={handleAgentInboxQuickReply}
+							onOpenAndReply={handleAgentInboxOpenAndReply}
+							onMarkAsRead={handleAgentInboxMarkAsRead}
+							onToggleThinking={handleAgentInboxToggleThinking}
 						/>
 					</Suspense>
 				)}

@@ -116,6 +116,8 @@ export const DEFAULT_ONBOARDING_STATS: OnboardingStats = {
 
 export const DEFAULT_ENCORE_FEATURES: EncoreFeatureFlags = {
 	directorNotes: false,
+	unifiedInbox: false,
+	tabDescription: false,
 	usageStats: true,
 	symphony: true,
 	maestroCue: false,

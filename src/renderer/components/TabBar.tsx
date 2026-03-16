@@ -50,6 +50,7 @@ interface TabBarProps {
 	onUnifiedTabReorder?: (fromIndex: number, toIndex: number) => void;
 	onTabStar?: (tabId: string, starred: boolean) => void;
 	onTabMarkUnread?: (tabId: string) => void;
+	onUpdateTabDescription?: (tabId: string, description: string) => void;
 	/** Handler to open merge session modal with this tab as source */
 	onMergeWith?: (tabId: string) => void;
 	/** Handler to open send to agent modal with this tab as source */
@@ -130,6 +131,8 @@ interface TabProps {
 	onStar?: (tabId: string, starred: boolean) => void;
 	/** Stable callback - receives tabId */
 	onMarkUnread?: (tabId: string) => void;
+	/** Stable callback - receives tabId and description */
+	onUpdateTabDescription?: (tabId: string, description: string) => void;
 	/** Stable callback - receives tabId */
 	onMergeWith?: (tabId: string) => void;
 	/** Stable callback - receives tabId */
@@ -179,8 +182,9 @@ interface TabProps {
  * Memoized per-tab via useMemo in the Tab component to avoid recalculation on every render.
  */
 function getTabDisplayName(tab: AITab): string {
-	if (tab.name) {
-		return tab.name;
+	const trimmedName = tab.name?.trim();
+	if (trimmedName) {
+		return trimmedName;
 	}
 	if (tab.agentSessionId) {
 		const id = tab.agentSessionId;
@@ -233,6 +237,7 @@ const Tab = memo(function Tab({
 	onRename,
 	onStar,
 	onMarkUnread,
+	onUpdateTabDescription,
 	onMergeWith,
 	onSendToAgent,
 	onSummarizeAndContinue,
@@ -256,6 +261,8 @@ const Tab = memo(function Tab({
 	const [isHovered, setIsHovered] = useState(false);
 	const [overlayOpen, setOverlayOpen] = useState(false);
 	const [showCopied, setShowCopied] = useState<'sessionId' | 'deepLink' | false>(false);
+	const [isEditingDescription, setIsEditingDescription] = useState(false);
+	const [descriptionDraft, setDescriptionDraft] = useState(tab.description ?? '');
 	const [overlayPosition, setOverlayPosition] = useState<{
 		top: number;
 		left: number;
@@ -263,6 +270,7 @@ const Tab = memo(function Tab({
 	} | null>(null);
 	const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const tabRef = useRef<HTMLDivElement>(null);
+	const descriptionButtonRef = useRef<HTMLButtonElement>(null);
 
 	// Register ref with parent for scroll-into-view functionality
 	const setTabRef = useCallback(
@@ -372,6 +380,44 @@ const Tab = memo(function Tab({
 		},
 		[onRename, tabId]
 	);
+
+	const handleDescriptionSave = useCallback(
+		(value: string) => {
+			const trimmed = value.trim();
+			onUpdateTabDescription?.(tabId, trimmed);
+			setIsEditingDescription(false);
+			setDescriptionDraft(trimmed || (tab.description ?? ''));
+			requestAnimationFrame(() => {
+				descriptionButtonRef.current?.focus();
+			});
+		},
+		[onUpdateTabDescription, tabId, tab.description]
+	);
+
+	const handleDescriptionCancel = useCallback(() => {
+		setDescriptionDraft(tab.description ?? '');
+		setIsEditingDescription(false);
+		requestAnimationFrame(() => {
+			descriptionButtonRef.current?.focus();
+		});
+	}, [tab.description]);
+
+	const handleDescriptionKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+			if (e.key === 'Enter' && !e.shiftKey) {
+				e.preventDefault();
+				handleDescriptionSave(descriptionDraft);
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				handleDescriptionCancel();
+			}
+		},
+		[descriptionDraft, handleDescriptionSave, handleDescriptionCancel]
+	);
+
+	const handleDescriptionBlur = useCallback(() => {
+		handleDescriptionSave(descriptionDraft);
+	}, [descriptionDraft, handleDescriptionSave]);
 
 	const handleMarkUnreadClick = useCallback(
 		(e: React.MouseEvent) => {
@@ -518,6 +564,28 @@ const Tab = memo(function Tab({
 
 	// Memoize display name to avoid recalculation on every render
 	const displayName = useMemo(() => getTabDisplayName(tab), [tab.name, tab.agentSessionId]);
+
+	useEffect(() => {
+		if (!isEditingDescription) {
+			setDescriptionDraft(tab.description ?? '');
+		}
+	}, [tab.description, isEditingDescription]);
+
+	useEffect(() => {
+		if (!overlayOpen && isEditingDescription) {
+			const trimmed = descriptionDraft.trim();
+			onUpdateTabDescription?.(tabId, trimmed);
+			setIsEditingDescription(false);
+			setDescriptionDraft(trimmed || (tab.description ?? ''));
+		}
+	}, [
+		overlayOpen,
+		isEditingDescription,
+		descriptionDraft,
+		onUpdateTabDescription,
+		tabId,
+		tab.description,
+	]);
 
 	// Hover background varies by theme mode for proper contrast
 	const hoverBgColor = theme.mode === 'light' ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.08)';
@@ -769,6 +837,52 @@ const Tab = memo(function Tab({
 										<Edit2 className="w-3.5 h-3.5" style={{ color: theme.colors.textDim }} />
 										Rename Tab
 									</button>
+								)}
+
+								{onUpdateTabDescription && (
+									<div
+										className="mx-1 my-2 rounded border p-2"
+										style={{
+											borderColor: theme.colors.border,
+											backgroundColor: theme.colors.bgActivity,
+										}}
+									>
+										<div
+											className="mb-1 text-[10px] font-semibold uppercase tracking-wide"
+											style={{ color: theme.colors.textDim }}
+										>
+											Tab Description
+										</div>
+										{isEditingDescription ? (
+											<textarea
+												value={descriptionDraft}
+												onChange={(e) => setDescriptionDraft(e.target.value)}
+												onKeyDown={handleDescriptionKeyDown}
+												onBlur={handleDescriptionBlur}
+												autoFocus
+												placeholder="Add context for this tab"
+												rows={3}
+												className="w-full resize-none rounded px-2 py-1.5 text-xs outline-none"
+												style={{
+													backgroundColor: theme.colors.bgMain,
+													border: `1px solid ${theme.colors.border}`,
+													color: theme.colors.textMain,
+												}}
+											/>
+										) : (
+											<button
+												ref={descriptionButtonRef}
+												onClick={(e) => {
+													e.stopPropagation();
+													setIsEditingDescription(true);
+												}}
+												className="w-full rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-white/10"
+												style={{ color: theme.colors.textMain }}
+											>
+												{tab.description?.trim() ? tab.description : 'Add description'}
+											</button>
+										)}
+									</div>
 								)}
 
 								{/* Mark as Unread button - only show for tabs with established session */}
@@ -2029,6 +2143,7 @@ function TabBarInner({
 	onTabReorder,
 	onTabStar,
 	onTabMarkUnread,
+	onUpdateTabDescription,
 	onMergeWith,
 	onSendToAgent,
 	onSummarizeAndContinue,
@@ -2346,6 +2461,13 @@ function TabBarInner({
 		[onTabMarkUnread]
 	);
 
+	const handleTabUpdateDescription = useCallback(
+		(tabId: string, description: string) => {
+			onUpdateTabDescription?.(tabId, description);
+		},
+		[onUpdateTabDescription]
+	);
+
 	const handleTabMergeWith = useCallback(
 		(tabId: string) => {
 			onMergeWith?.(tabId);
@@ -2555,6 +2677,9 @@ function TabBarInner({
 										onRename={handleRenameRequest}
 										onStar={onTabStar && tab.agentSessionId ? handleTabStar : undefined}
 										onMarkUnread={onTabMarkUnread ? handleTabMarkUnread : undefined}
+										onUpdateTabDescription={
+											onUpdateTabDescription ? handleTabUpdateDescription : undefined
+										}
 										onMergeWith={onMergeWith ? handleTabMergeWith : undefined}
 										onSendToAgent={onSendToAgent ? handleTabSendToAgent : undefined}
 										onSummarizeAndContinue={
@@ -2720,6 +2845,9 @@ function TabBarInner({
 									onRename={handleRenameRequest}
 									onStar={onTabStar && tab.agentSessionId ? handleTabStar : undefined}
 									onMarkUnread={onTabMarkUnread ? handleTabMarkUnread : undefined}
+									onUpdateTabDescription={
+										onUpdateTabDescription ? handleTabUpdateDescription : undefined
+									}
 									onMergeWith={onMergeWith ? handleTabMergeWith : undefined}
 									onSendToAgent={onSendToAgent ? handleTabSendToAgent : undefined}
 									onSummarizeAndContinue={

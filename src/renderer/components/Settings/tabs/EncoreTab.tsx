@@ -13,8 +13,10 @@ import {
 	Settings,
 	Check,
 	Database,
+	Inbox,
 	Music,
 	Lock,
+	Pencil,
 	Plus,
 	X,
 	Zap,
@@ -449,6 +451,128 @@ export function EncoreTab({ theme, isOpen }: EncoreTabProps) {
 						/>
 					</div>
 				</button>
+			</div>
+
+			{/* Unified Inbox Feature Section */}
+			<div
+				className="rounded-lg border"
+				style={{
+					borderColor: encoreFeatures.unifiedInbox ? theme.colors.accent : theme.colors.border,
+					backgroundColor: encoreFeatures.unifiedInbox ? `${theme.colors.accent}08` : 'transparent',
+				}}
+			>
+				<div className="w-full flex items-center justify-between p-4 text-left">
+					<div className="flex items-center gap-3">
+						<Inbox
+							className="w-5 h-5"
+							style={{
+								color: encoreFeatures.unifiedInbox ? theme.colors.accent : theme.colors.textDim,
+							}}
+						/>
+						<div>
+							<div
+								className="text-sm font-bold flex items-center gap-2"
+								style={{ color: theme.colors.textMain }}
+							>
+								Unified Inbox
+								<span
+									className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
+									style={{
+										backgroundColor: theme.colors.warning + '30',
+										color: theme.colors.warning,
+									}}
+								>
+									Beta
+								</span>
+							</div>
+							<div className="text-xs mt-0.5" style={{ color: theme.colors.textDim }}>
+								Review unread agent activity across sessions and send quick replies from one queue
+							</div>
+						</div>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-label="Toggle Unified Inbox"
+						aria-checked={encoreFeatures.unifiedInbox}
+						onClick={(e) => {
+							e.stopPropagation();
+							setEncoreFeatures({
+								...encoreFeatures,
+								unifiedInbox: !encoreFeatures.unifiedInbox,
+							});
+						}}
+						className={`relative w-10 h-5 rounded-full transition-colors ${encoreFeatures.unifiedInbox ? '' : 'opacity-50'}`}
+						style={{
+							backgroundColor: encoreFeatures.unifiedInbox
+								? theme.colors.accent
+								: theme.colors.border,
+						}}
+					>
+						<div
+							className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+							style={{
+								transform: encoreFeatures.unifiedInbox ? 'translateX(22px)' : 'translateX(2px)',
+							}}
+						/>
+					</button>
+				</div>
+			</div>
+
+			{/* Tab Descriptions Feature Section */}
+			<div
+				className="rounded-lg border"
+				style={{
+					borderColor: encoreFeatures.tabDescription ? theme.colors.accent : theme.colors.border,
+					backgroundColor: encoreFeatures.tabDescription
+						? `${theme.colors.accent}08`
+						: 'transparent',
+				}}
+			>
+				<div className="w-full flex items-center justify-between p-4 text-left">
+					<div className="flex items-center gap-3">
+						<Pencil
+							className="w-5 h-5"
+							style={{
+								color: encoreFeatures.tabDescription ? theme.colors.accent : theme.colors.textDim,
+							}}
+						/>
+						<div>
+							<div className="text-sm font-bold" style={{ color: theme.colors.textMain }}>
+								Tab Descriptions
+							</div>
+							<div className="text-xs mt-0.5" style={{ color: theme.colors.textDim }}>
+								Add lightweight context notes to agent tabs directly from the tab hover card
+							</div>
+						</div>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-label="Toggle Tab Descriptions"
+						aria-checked={encoreFeatures.tabDescription}
+						onClick={(e) => {
+							e.stopPropagation();
+							setEncoreFeatures({
+								...encoreFeatures,
+								tabDescription: !encoreFeatures.tabDescription,
+							});
+						}}
+						className={`relative w-10 h-5 rounded-full transition-colors ${encoreFeatures.tabDescription ? '' : 'opacity-50'}`}
+						style={{
+							backgroundColor: encoreFeatures.tabDescription
+								? theme.colors.accent
+								: theme.colors.border,
+						}}
+					>
+						<div
+							className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+							style={{
+								transform: encoreFeatures.tabDescription ? 'translateX(22px)' : 'translateX(2px)',
+							}}
+						/>
+					</button>
+				</div>
 			</div>
 
 			{/* Director's Notes Feature Section */}

@@ -121,6 +121,8 @@ interface QuickActionsModalProps {
 	onOpenSymphony?: () => void;
 	// Director's Notes
 	onOpenDirectorNotes?: () => void;
+	// Unified Inbox
+	onOpenAgentInbox?: () => void;
 	// Maestro Cue
 	onOpenMaestroCue?: () => void;
 	onConfigureCue?: (session: Session) => void;
@@ -212,6 +214,7 @@ export const QuickActionsModal = memo(function QuickActionsModal(props: QuickAct
 		onOpenLastDocumentGraph,
 		onOpenSymphony,
 		onOpenDirectorNotes,
+		onOpenAgentInbox,
 		onOpenMaestroCue,
 		onConfigureCue,
 		autoScrollAiMode,
@@ -1063,6 +1066,20 @@ export const QuickActionsModal = memo(function QuickActionsModal(props: QuickAct
 						subtext: 'View unified history and AI synopsis across all sessions',
 						action: () => {
 							onOpenDirectorNotes();
+							setQuickActionOpen(false);
+						},
+					},
+				]
+			: []),
+		...(onOpenAgentInbox
+			? [
+					{
+						id: 'agentInbox',
+						label: 'Unified Inbox',
+						shortcut: shortcuts.agentInbox,
+						subtext: 'Review unread agent activity and respond quickly',
+						action: () => {
+							onOpenAgentInbox();
 							setQuickActionOpen(false);
 						},
 					},

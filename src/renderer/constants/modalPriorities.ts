@@ -50,6 +50,9 @@ export const MODAL_PRIORITIES = {
 	/** Director's Notes modal - unified history and AI overview */
 	DIRECTOR_NOTES: 848,
 
+	/** Agent Inbox modal - unified agent activity and quick replies */
+	AGENT_INBOX: 847,
+
 	/** Rename group modal */
 	RENAME_GROUP: 850,
 

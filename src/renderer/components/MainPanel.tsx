@@ -188,6 +188,7 @@ interface MainPanelProps {
 		agentSessionId: string,
 		updates: { name?: string | null; starred?: boolean }
 	) => void;
+	onUpdateTabDescription?: (tabId: string, description: string) => void;
 	onToggleTabReadOnlyMode?: () => void;
 	onToggleTabSaveToHistory?: () => void;
 	onToggleTabShowThinking?: () => void;
@@ -1566,6 +1567,7 @@ export const MainPanel = React.memo(
 									onUnifiedTabReorder={onUnifiedTabReorder}
 									onTabStar={onTabStar}
 									onTabMarkUnread={onTabMarkUnread}
+									onUpdateTabDescription={props.onUpdateTabDescription}
 									onMergeWith={onMergeWith}
 									onSendToAgent={onSendToAgent}
 									onSummarizeAndContinue={onSummarizeAndContinue}

@@ -79,6 +79,7 @@ export const DEFAULT_SHORTCUTS: Record<string, Shortcut> = {
 		label: "Director's Notes",
 		keys: ['Meta', 'Shift', 'o'],
 	},
+	agentInbox: { id: 'agentInbox', label: 'Unified Inbox', keys: ['Alt', 'Meta', 'i'] },
 	openCue: {
 		id: 'openCue',
 		label: 'Maestro Cue',

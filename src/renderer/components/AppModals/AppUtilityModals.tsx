@@ -140,6 +140,8 @@ export interface AppUtilityModalsProps {
 
 	// Director's Notes
 	onOpenDirectorNotes?: () => void;
+	// Unified Inbox
+	onOpenAgentInbox?: () => void;
 
 	// Maestro Cue
 	onOpenMaestroCue?: () => void;
@@ -348,6 +350,8 @@ export const AppUtilityModals = memo(function AppUtilityModals({
 	onOpenSymphony,
 	// Director's Notes
 	onOpenDirectorNotes,
+	// Unified Inbox
+	onOpenAgentInbox,
 	// Maestro Cue
 	onOpenMaestroCue,
 	onConfigureCue,
@@ -511,6 +515,7 @@ export const AppUtilityModals = memo(function AppUtilityModals({
 					onOpenLastDocumentGraph={onOpenLastDocumentGraph}
 					onOpenSymphony={onOpenSymphony}
 					onOpenDirectorNotes={onOpenDirectorNotes}
+					onOpenAgentInbox={onOpenAgentInbox}
 					onOpenMaestroCue={onOpenMaestroCue}
 					onConfigureCue={onConfigureCue}
 					autoScrollAiMode={autoScrollAiMode}

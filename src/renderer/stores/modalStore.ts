@@ -146,6 +146,15 @@ export interface KeyboardMasteryData {
 	level: number;
 }
 
+// Note: filterMode/sortMode typed as string (not InboxFilterMode/InboxSortMode)
+// to avoid circular dependency with types/agent-inbox.ts
+/** Agent Inbox modal data (persisted filter/sort/expand state) */
+export interface AgentInboxModalData {
+	filterMode?: string;
+	sortMode?: string;
+	isExpanded?: boolean;
+}
+
 // ============================================================================
 // Modal ID Registry
 // ============================================================================
@@ -229,7 +238,9 @@ export type ModalId =
 	| 'directorNotes'
 	// Maestro Cue
 	| 'cueModal'
-	| 'cueYamlEditor';
+	| 'cueYamlEditor'
+	// Agent Inbox (Unified Inbox)
+	| 'agentInbox';
 
 /**
  * Type mapping from ModalId to its data type.
@@ -261,6 +272,7 @@ export interface ModalDataMap {
 	keyboardMastery: KeyboardMasteryData;
 	lightbox: LightboxData;
 	cueYamlEditor: CueYamlEditorData;
+	agentInbox: AgentInboxModalData;
 }
 
 // Helper type to get data type for a modal ID
@@ -783,6 +795,36 @@ export function getModalActions() {
 		setDirectorNotesOpen: (open: boolean) =>
 			open ? openModal('directorNotes') : closeModal('directorNotes'),
 
+		// Agent Inbox Modal (Unified Inbox)
+		setAgentInboxOpen: (open: boolean) => {
+			if (!open) {
+				useModalStore.setState((state) => {
+					const current = state.modals.get('agentInbox');
+					if (!current?.open) return state;
+					const modals = new Map(state.modals);
+					modals.set('agentInbox', { open: false, data: current.data });
+					return { modals };
+				});
+				return;
+			}
+
+			const current = useModalStore.getState().getData('agentInbox');
+			openModal('agentInbox', current ?? {});
+		},
+		updateAgentInboxData: (data: Record<string, unknown>) => {
+			const current = useModalStore.getState().getData('agentInbox');
+			if (current) {
+				updateModalData('agentInbox', data);
+				return;
+			}
+
+			useModalStore.setState((state) => {
+				const modals = new Map(state.modals);
+				modals.set('agentInbox', { open: false, data: data as AgentInboxModalData });
+				return { modals };
+			});
+		},
+
 		// Maestro Cue Modal
 		setCueModalOpen: (open: boolean) => (open ? openModal('cueModal') : closeModal('cueModal')),
 
@@ -880,6 +922,7 @@ export function useModalActions() {
 	const symphonyModalOpen = useModalStore(selectModalOpen('symphony'));
 	const windowsWarningModalOpen = useModalStore(selectModalOpen('windowsWarning'));
 	const directorNotesOpen = useModalStore(selectModalOpen('directorNotes'));
+	const agentInboxOpen = useModalStore(selectModalOpen('agentInbox'));
 	const cueModalOpen = useModalStore(selectModalOpen('cueModal'));
 	const cueYamlEditorOpen = useModalStore(selectModalOpen('cueYamlEditor'));
 	const cueYamlEditorData = useModalStore(selectModalData('cueYamlEditor'));
@@ -1050,6 +1093,9 @@ export function useModalActions() {
 
 		// Director's Notes Modal
 		directorNotesOpen,
+
+		// Agent Inbox Modal
+		agentInboxOpen,
 
 		// Maestro Cue Modal
 		cueModalOpen,

@@ -5750,3 +5750,118 @@ describe('Performance: Many file tabs (10+)', () => {
 		expect(inactiveFileTab).toHaveStyle({ marginBottom: '0' });
 	});
 });
+
+describe('TabBar description section', () => {
+	const mockOnTabSelect = vi.fn();
+	const mockOnTabClose = vi.fn();
+	const mockOnNewTab = vi.fn();
+	const mockOnUpdateTabDescription = vi.fn();
+
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.clearAllMocks();
+		Element.prototype.scrollTo = vi.fn();
+		Element.prototype.scrollIntoView = vi.fn();
+		Object.assign(navigator, {
+			clipboard: {
+				writeText: vi.fn().mockResolvedValue(undefined),
+			},
+		});
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	function openOverlay(tabName: string) {
+		const tab = screen.getByText(tabName).closest('[data-tab-id]')!;
+		fireEvent.mouseEnter(tab);
+		act(() => {
+			vi.advanceTimersByTime(450);
+		});
+	}
+
+	it('renders description section when onUpdateTabDescription is provided', () => {
+		render(
+			<TabBar
+				tabs={[createTab({ id: 'tab-1', name: 'Tab 1', agentSessionId: 'session-1' })]}
+				activeTabId="tab-1"
+				theme={mockTheme}
+				onTabSelect={mockOnTabSelect}
+				onTabClose={mockOnTabClose}
+				onNewTab={mockOnNewTab}
+				onUpdateTabDescription={mockOnUpdateTabDescription}
+			/>
+		);
+
+		openOverlay('Tab 1');
+
+		expect(screen.getByText('Tab Description')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Add description' })).toBeInTheDocument();
+	});
+
+	it('does not render description section when onUpdateTabDescription is undefined', () => {
+		render(
+			<TabBar
+				tabs={[createTab({ id: 'tab-1', name: 'Tab 1', agentSessionId: 'session-1' })]}
+				activeTabId="tab-1"
+				theme={mockTheme}
+				onTabSelect={mockOnTabSelect}
+				onTabClose={mockOnTabClose}
+				onNewTab={mockOnNewTab}
+			/>
+		);
+
+		openOverlay('Tab 1');
+
+		expect(screen.queryByText('Tab Description')).not.toBeInTheDocument();
+	});
+
+	it('shows existing description text when tab has one', () => {
+		render(
+			<TabBar
+				tabs={[
+					createTab({
+						id: 'tab-1',
+						name: 'Tab 1',
+						description: 'Keep this context',
+						agentSessionId: 'session-1',
+					}),
+				]}
+				activeTabId="tab-1"
+				theme={mockTheme}
+				onTabSelect={mockOnTabSelect}
+				onTabClose={mockOnTabClose}
+				onNewTab={mockOnNewTab}
+				onUpdateTabDescription={mockOnUpdateTabDescription}
+			/>
+		);
+
+		openOverlay('Tab 1');
+
+		expect(screen.getByRole('button', { name: 'Keep this context' })).toBeInTheDocument();
+	});
+
+	it('saves a trimmed description when enter is pressed in the editor', () => {
+		render(
+			<TabBar
+				tabs={[createTab({ id: 'tab-1', name: 'Tab 1', agentSessionId: 'session-1' })]}
+				activeTabId="tab-1"
+				theme={mockTheme}
+				onTabSelect={mockOnTabSelect}
+				onTabClose={mockOnTabClose}
+				onNewTab={mockOnNewTab}
+				onUpdateTabDescription={mockOnUpdateTabDescription}
+			/>
+		);
+
+		openOverlay('Tab 1');
+		fireEvent.click(screen.getByRole('button', { name: 'Add description' }));
+
+		const textarea = screen.getByPlaceholderText('Add context for this tab');
+		fireEvent.change(textarea, { target: { value: '  concise summary  ' } });
+		fireEvent.keyDown(textarea, { key: 'Enter', code: 'Enter' });
+
+		expect(mockOnUpdateTabDescription).toHaveBeenCalledWith('tab-1', 'concise summary');
+	});
+});

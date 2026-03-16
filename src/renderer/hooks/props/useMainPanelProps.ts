@@ -171,6 +171,7 @@ export interface UseMainPanelPropsDeps {
 		agentSessionId: string,
 		updates: { name?: string | null; starred?: boolean }
 	) => void;
+	handleUpdateTabDescription?: (tabId: string, description: string) => void;
 	handleTabStar: (tabId: string, starred: boolean) => void;
 	handleTabMarkUnread: (tabId: string) => void;
 	handleToggleTabReadOnlyMode: () => void;
@@ -358,6 +359,7 @@ export function useMainPanelProps(deps: UseMainPanelPropsDeps) {
 			onTabReorder: deps.handleTabReorder,
 			onUnifiedTabReorder: deps.handleUnifiedTabReorder,
 			onUpdateTabByClaudeSessionId: deps.handleUpdateTabByClaudeSessionId,
+			onUpdateTabDescription: deps.handleUpdateTabDescription,
 			onTabStar: deps.handleTabStar,
 			onTabMarkUnread: deps.handleTabMarkUnread,
 			onToggleTabReadOnlyMode: deps.handleToggleTabReadOnlyMode,
@@ -563,6 +565,7 @@ export function useMainPanelProps(deps: UseMainPanelPropsDeps) {
 			deps.handleTabReorder,
 			deps.handleUnifiedTabReorder,
 			deps.handleUpdateTabByClaudeSessionId,
+			deps.handleUpdateTabDescription,
 			deps.handleTabStar,
 			deps.handleTabMarkUnread,
 			deps.handleToggleTabReadOnlyMode,
