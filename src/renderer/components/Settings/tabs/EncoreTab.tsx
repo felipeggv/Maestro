@@ -435,7 +435,9 @@ export function EncoreTab({ theme, isOpen }: EncoreTabProps) {
 				className="rounded-lg border"
 				style={{
 					borderColor: encoreFeatures.tabDescription ? theme.colors.accent : theme.colors.border,
-					backgroundColor: encoreFeatures.tabDescription ? `${theme.colors.accent}08` : 'transparent',
+					backgroundColor: encoreFeatures.tabDescription
+						? `${theme.colors.accent}08`
+						: 'transparent',
 				}}
 			>
 				<div className="w-full flex items-center justify-between p-4">
