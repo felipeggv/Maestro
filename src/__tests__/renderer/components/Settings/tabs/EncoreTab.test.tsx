@@ -223,7 +223,7 @@ describe('EncoreTab', () => {
 				await vi.advanceTimersByTimeAsync(50);
 			});
 
-			expect(screen.getByText('Beta')).toBeInTheDocument();
+			expect(screen.getAllByText('Beta')).toHaveLength(2);
 		});
 
 		it("should render subtitle description for Director's Notes", async () => {
