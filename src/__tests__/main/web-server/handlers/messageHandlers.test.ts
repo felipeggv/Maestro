@@ -1016,6 +1016,28 @@ describe('WebSocketMessageHandler', () => {
 			expect(response.error).toBe('Tab not found: tab-1');
 		});
 
+		it('should not emit a definitive rename result when desktop confirmation is inconclusive', async () => {
+			vi.mocked(callbacks.renameTab).mockResolvedValueOnce({
+				success: false,
+				error: 'The desktop did not confirm the rename; it may still be applying',
+				unconfirmed: true,
+			});
+
+			handler.handleMessage(client, {
+				type: 'rename_tab',
+				sessionId: 'session-1',
+				tabId: 'tab-1',
+				newName: 'New Name',
+			});
+
+			await vi.waitFor(() => {
+				expect(callbacks.renameTab).toHaveBeenCalledWith('session-1', 'tab-1', 'New Name');
+			});
+			await Promise.resolve();
+
+			expect(client.socket.send).not.toHaveBeenCalled();
+		});
+
 		it('should return explicit failure when desktop rename throws', async () => {
 			vi.mocked(callbacks.renameTab).mockRejectedValueOnce(new Error('disk full'));
 

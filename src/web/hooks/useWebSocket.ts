@@ -597,7 +597,8 @@ export interface WebSocketEventHandlers {
 		tabId: string,
 		success: boolean,
 		newName: string,
-		error?: string
+		error?: string,
+		requestId?: string
 	) => void;
 	/** Called when a group chat message is broadcast */
 	onGroupChatMessage?: (chatId: string, message: GroupChatMessage) => void;
@@ -1036,7 +1037,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 							renameMsg.tabId,
 							renameMsg.success,
 							renameMsg.newName,
-							renameMsg.error
+							renameMsg.error,
+							typeof renameMsg.requestId === 'string' ? renameMsg.requestId : undefined
 						);
 						break;
 					}

@@ -153,7 +153,8 @@ export interface MobileSessionHandlers {
 		tabId: string,
 		success: boolean,
 		newName: string,
-		error?: string
+		error?: string,
+		requestId?: string
 	) => void;
 }
 
@@ -263,6 +264,22 @@ export function useMobileSessionManagement(
 	const activeTabIdRef = useRef<string | null>(urlTabId || savedActiveTabId);
 	// Timestamp of last local session selection - used to ignore server echoes
 	const lastLocalSelectionRef = useRef<number>(0);
+	const pendingRenameRequestsRef = useRef<Map<string, string>>(new Map());
+
+	const updateAiTab = useCallback(
+		(sessionId: string, tabId: string, updater: (tab: AITabData) => AITabData) => {
+			setSessions((prev) =>
+				prev.map((s) => {
+					if (s.id !== sessionId) return s;
+					return {
+						...s,
+						aiTabs: s.aiTabs?.map((tab) => (tab.id === tabId ? updater(tab) : tab)),
+					};
+				})
+			);
+		},
+		[]
+	);
 
 	// Keep activeSessionIdRef in sync with state
 	useEffect(() => {
@@ -407,7 +424,23 @@ export function useMobileSessionManagement(
 	const handleRenameTab = useCallback(
 		(tabId: string, newName: string) => {
 			if (!activeSessionId) return;
-			sendRef.current?.({ type: 'rename_tab', sessionId: activeSessionId, tabId, newName });
+			const requestId =
+				typeof crypto !== 'undefined' && crypto.randomUUID
+					? crypto.randomUUID()
+					: Date.now().toString(36) + Math.random().toString(36);
+			const requestKey = `${activeSessionId}:${tabId}`;
+			pendingRenameRequestsRef.current.set(requestKey, requestId);
+			const sent =
+				sendRef.current?.({
+					type: 'rename_tab',
+					sessionId: activeSessionId,
+					tabId,
+					newName,
+					requestId,
+				}) ?? false;
+			if (!sent) {
+				pendingRenameRequestsRef.current.delete(requestKey);
+			}
 		},
 		[activeSessionId, sendRef]
 	);
@@ -809,24 +842,22 @@ export function useMobileSessionManagement(
 				tabId: string,
 				success: boolean,
 				newName: string,
-				error?: string
+				error?: string,
+				requestId?: string
 			) => {
+				const requestKey = `${sessionId}:${tabId}`;
+				if (requestId) {
+					const latestRequestId = pendingRenameRequestsRef.current.get(requestKey);
+					if (latestRequestId !== requestId) return;
+					pendingRenameRequestsRef.current.delete(requestKey);
+				}
+
 				if (!success) {
 					webLogger.warn(`Rename tab failed: ${error || 'unknown error'}`, 'Mobile');
 					return;
 				}
 
-				setSessions((prev) =>
-					prev.map((s) => {
-						if (s.id !== sessionId) return s;
-						return {
-							...s,
-							aiTabs: s.aiTabs?.map((tab) =>
-								tab.id === tabId ? { ...tab, name: newName || null } : tab
-							),
-						};
-					})
-				);
+				updateAiTab(sessionId, tabId, (tab) => ({ ...tab, name: newName || null }));
 			},
 		}),
 		[
@@ -835,6 +866,7 @@ export function useMobileSessionManagement(
 			onBionifyReadingModeUpdate,
 			onCustomCommands,
 			onAutoRunStateChange,
+			updateAiTab,
 		]
 	);
 

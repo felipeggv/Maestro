@@ -1147,6 +1147,7 @@ describe('useWebSocket', () => {
 					tabId: 'tab-1',
 					newName: 'New name',
 					error: 'Tab not found',
+					requestId: 'rename-request-1',
 				} as RenameTabResultMessage);
 			});
 
@@ -1155,7 +1156,28 @@ describe('useWebSocket', () => {
 				'tab-1',
 				false,
 				'New name',
-				'Tab not found'
+				'Tab not found',
+				'rename-request-1'
+			);
+
+			act(() => {
+				ws.simulateMessage({
+					type: 'rename_tab_result',
+					success: true,
+					sessionId: 'session-1',
+					tabId: 'tab-1',
+					newName: 'Clean name',
+					requestId: 123,
+				} as unknown as RenameTabResultMessage);
+			});
+
+			expect(onRenameTabResult).toHaveBeenLastCalledWith(
+				'session-1',
+				'tab-1',
+				true,
+				'Clean name',
+				undefined,
+				undefined
 			);
 		});
 

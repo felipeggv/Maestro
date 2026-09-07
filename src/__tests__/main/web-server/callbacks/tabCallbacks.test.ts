@@ -22,7 +22,7 @@ type RenameCallback = (
 	sessionId: string,
 	tabId: string,
 	newName: string
-) => Promise<boolean | { success: boolean; error?: string }>;
+) => Promise<boolean | { success: boolean; error?: string; unconfirmed?: boolean }>;
 
 function setup() {
 	let renameCallback: RenameCallback | undefined;
@@ -205,6 +205,7 @@ describe('tab callbacks', () => {
 			await expect(unanswered).resolves.toEqual({
 				success: false,
 				error: 'The desktop did not confirm the rename; it may still be applying',
+				unconfirmed: true,
 			});
 			expect(ipcMain.removeListener).toHaveBeenCalled();
 

@@ -147,6 +147,7 @@ describe('useMobileSessionManagement', () => {
 			sessionId: 'session-1',
 			tabId: 'tab-1',
 			newName: 'Client Plan',
+			requestId: expect.any(String),
 		});
 		expect(result.current.sessions[0].aiTabs?.[0].name).toBe('Client Plan');
 
@@ -205,5 +206,72 @@ describe('useMobileSessionManagement', () => {
 		});
 
 		expect(result.current.sessions[0].aiTabs?.[0].name).toBe('Old Name');
+	});
+
+	it('ignores stale rename results when overlapping renames complete out of order', () => {
+		const sendSpy = vi.fn(() => true);
+		const session = {
+			id: 'session-1',
+			name: 'Session 1',
+			toolType: 'claude-code',
+			state: 'idle',
+			inputMode: 'ai',
+			cwd: '/tmp',
+			aiTabs: [
+				{
+					id: 'tab-1',
+					agentSessionId: 'agent-session-1',
+					name: 'Old Name',
+					starred: false,
+					inputValue: '',
+					createdAt: 1700000000000,
+					state: 'idle',
+				},
+			],
+			activeTabId: 'tab-1',
+		} as Session;
+		const { result } = renderHook(() =>
+			useMobileSessionManagement({
+				...baseDeps,
+				savedActiveSessionId: 'session-1',
+				savedActiveTabId: 'tab-1',
+				sendRef: { current: sendSpy },
+			})
+		);
+
+		act(() => {
+			result.current.setSessions([session]);
+		});
+		act(() => {
+			result.current.handleRenameTab('tab-1', 'Older');
+			result.current.handleRenameTab('tab-1', 'Newer');
+		});
+
+		const olderRequestId = sendSpy.mock.calls[0][0].requestId as string;
+		const newerRequestId = sendSpy.mock.calls[1][0].requestId as string;
+		expect(olderRequestId).toEqual(expect.any(String));
+		expect(newerRequestId).toEqual(expect.any(String));
+		expect(olderRequestId).not.toBe(newerRequestId);
+
+		act(() => {
+			result.current.sessionsHandlers.onRenameTabResult(
+				'session-1',
+				'tab-1',
+				true,
+				'Newer',
+				undefined,
+				newerRequestId
+			);
+			result.current.sessionsHandlers.onRenameTabResult(
+				'session-1',
+				'tab-1',
+				true,
+				'Older',
+				undefined,
+				olderRequestId
+			);
+		});
+
+		expect(result.current.sessions[0].aiTabs?.[0].name).toBe('Newer');
 	});
 });
